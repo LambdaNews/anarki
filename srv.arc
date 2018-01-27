@@ -205,24 +205,28 @@ Connection: close"))
 
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
+(def prrn (x)
+  (map [pr _ "\r\n"]
+       (lines:tostring:prn x)))
+
 (def respond (str op args cooks ip)
   (w/stdout str
     (iflet f (srvops* op)
            (let req (inst 'request 'args args 'cooks cooks 'ip ip)
              (if (redirector* op)
-                 (do (prn rdheader*)
-                     (prn "Location: " (f str req))
-                     (prn))
-                 (do (prn header*)
+                 (do (prrn rdheader*)
+                     (prrn "Location: " (f str req))
+                     (prrn))
+                 (do (prrn header*)
                      (awhen (max-age* op)
-                       (prn "Cache-Control: max-age=" it))
+                       (prrn "Cache-Control: max-age=" it))
                      (f str req))))
            (let filetype (static-filetype op)
              (aif (and filetype (file-exists (string staticdir* op)))
-                  (do (prn (type-header* filetype))
+                  (do (prrn (type-header* filetype))
                       (awhen static-max-age*
-                        (prn "Cache-Control: max-age=" it))
-                      (prn)
+                        (prrn "Cache-Control: max-age=" it))
+                      (prrn)
                       (w/infile i it
                         (whilet b (readb i)
                           (writeb b str))))
@@ -245,8 +249,8 @@ Connection: close"))
 
 (def respond-err (str msg . args)
   (w/stdout str
-    (prn header*)
-    (prn)
+    (prrn header*)
+    (prrn)
     (apply pr msg args)))
 
 (def parseheader (lines)
