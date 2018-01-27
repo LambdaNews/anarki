@@ -15,10 +15,15 @@
   (load-userinfo)
   (serve port))
 
+(def safe-load-admins ()
+  (aif (getenv "ARC_ADMINS")
+       (readall it)
+       (errsafe (readfile adminfile*))))
+
 (def load-userinfo ()
   (= hpasswords*   (safe-load-table hpwfile*)
      openids*      (safe-load-table oidfile*)
-     admins*       (map string (errsafe (readfile adminfile*)))
+     admins*       (map string (safe-load-admins))
      cookie->user* (safe-load-table cookfile*))
   (maptable (fn (k v) (= (user->cookie* v) k))
             cookie->user*))
