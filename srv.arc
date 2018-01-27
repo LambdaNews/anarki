@@ -204,6 +204,11 @@ Connection: close"))
   cooks nil
   ip    nil)
 
+(def prrn args
+  (let x (tostring (apply prn args))
+    (each line (lines x)
+      (pr line "\r\n"))))
+
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
 (def respond (str op args cooks ip)

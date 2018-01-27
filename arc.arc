@@ -662,11 +662,6 @@
   (do1 (apply pr args)
        (writec #\newline)))
 
-(def prrn args
-  (do1 (apply pr args)
-       (writec #\return)
-       (writec #\newline)))
-
 (mac wipe args
   `(do ,@(map (fn (a) `(= ,a nil)) args)))
 
