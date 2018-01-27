@@ -5,6 +5,9 @@
   "repository": "https://github.com/lambdanews/narc",
   "author": "Shawn Presser <shawnpresser@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "start": "narc -e '(aload \"news.arc\")' -e '(arc-eval (quote (nsv:int (or (getenv \"PORT\") \"1337\"))))'"
+  },
   "bin": {
     "narc": "./bin/narc"
   }

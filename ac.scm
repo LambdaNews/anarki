@@ -1064,31 +1064,30 @@
       (newline)
       (tle))))
 
+(define last-condition* #f)
+
 (define (tl)
   (display "Use (quit) to quit, (tl) to return here after an interrupt.\n")
   (tl2))
 
-(define (ac-prompt-read-1)
-  (let* ((in ((current-get-interaction-input-port)))
-         (form ((current-read-interaction) (object-name in) in)))
-    (if (eof-object? form) form (syntax->datum form))))
-
-(define (ac-prompt-read)
-  (display "arc> ")
-  (let ((form (ac-prompt-read-1)))
-    (cond ((eof-object? form) eof)
-          ((eqv? form ':a) eof)
-          (#t `(ac-prompt-eval ',form)))))
-
-(define (ac-prompt-eval expr)
-  (let ((val (arc-eval expr)))
-    (namespace-set-variable-value! (ac-global-name 'that) val)
-    (namespace-set-variable-value! (ac-global-name 'thatexpr) expr)
-    val))
-
 (define (tl2)
-  (parameterize ((current-prompt-read ac-prompt-read))
-    (read-eval-print-loop)))
+  (display "arc> ")
+  (on-err (lambda (c) 
+            (set! last-condition* c)
+            (display "Error: ")
+            (write (exn-message c))
+            (newline)
+            (tl2))
+    (lambda ()
+      (let ((expr (read)))
+        (if (eqv? expr ':a)
+            'done
+            (let ((val (arc-eval expr)))
+              (write val)
+              (namespace-set-variable-value! '_that val)
+              (namespace-set-variable-value! '_thatexpr expr)
+              (newline)
+              (tl2)))))))
 
 (define ac-load-path
   (list (getenv "ARC_HOME")
