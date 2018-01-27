@@ -959,6 +959,9 @@
 (define setuid (get-ffi-obj 'setuid #f (_fun _int -> _int)))
 (xdef setuid setuid)
 
+(define getuid (get-ffi-obj 'getuid #f (_fun -> _int)))
+(xdef getuid getuid)
+
 (xdef new-thread thread)
 (xdef kill-thread kill-thread)
 (xdef break-thread break-thread)
@@ -1388,6 +1391,9 @@
                                     (#t
                                      (cons (car cs) (unesc (cdr cs))))))))
                   (unesc (string->list s)))))
+
+(xdef getenv (lambda (name)
+               (or (getenv name) ar-nil)))
   
 )
 
