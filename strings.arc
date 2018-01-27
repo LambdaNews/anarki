@@ -224,3 +224,5 @@
 ; http://www.fileformat.info/info/unicode/block/latin_supplement/utf8test.htm
 ; http://en.wikipedia.org/wiki/Utf-8
 ; http://unicode.org/charts/charindex2.html
+
+(provide 'strings)

@@ -1,0 +1,21 @@
+#!/bin/sh
+
+dir="$(pwd)"
+bin="$0"
+while [ -L "${bin}" ]
+do
+    x="$(readlink "${bin}")"
+    cd "$(dirname "${bin}")"
+    bin="${x}"
+done
+cd "$(dirname "${bin}")"
+cd ..
+home="$(pwd)"
+cd "${dir}"
+
+if [ -z "$1" ]
+then
+  set -- -e '(tl)'
+fi
+
+ARC_HOME="${home}/" exec racket -f "${home}/as.scm" "$@"

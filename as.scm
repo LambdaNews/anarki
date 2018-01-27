@@ -9,8 +9,6 @@
 (require "brackets.scm")
 (use-bracket-readtable)
 
-(aload "arc.arc")
-(aload "libs.arc") 
-
-(tl)
+(aload (aresolve "arc.arc"))
+(aload (aresolve "libs.arc"))
 

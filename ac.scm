@@ -8,7 +8,7 @@
 (require (lib "pretty.ss"))
 (require (lib "foreign.ss"))
 (require racket/unsafe/ops)
-(require (only racket/base syntax->datum))
+(require (only racket/base syntax->datum memf memq member))
 (unsafe!)
 
 ; compile an Arc expression into a Scheme expression,
@@ -1090,6 +1090,46 @@
   (parameterize ((current-prompt-read ac-prompt-read))
     (read-eval-print-loop)))
 
+(define ac-load-path
+  (list (getenv "ARC_HOME")
+        (path->string (find-system-path 'orig-dir))))
+
+(xdef load-path ac-load-path)
+
+(define (aresolve path)
+  (if (file-exists? path) path
+    (car (or (memf file-exists?
+                   (map (lambda (base) (build-path base path))
+                        ac-load-path))
+             (memf file-exists?
+                   (map (lambda (base) (build-path base (string-append path ".arc")))
+                        ac-load-path))
+             (list ar-nil)))))
+
+(xdef resolve aresolve)
+
+(define ac-features (make-hash-table 'equal))
+
+(xdef features ac-features)
+
+(define (ac-feature? feature)
+  (hash-table-get ac-features feature #f))
+
+(xdef feature ac-feature?)
+
+(define (ac-provide feature)
+  (hash-table-put! ac-features feature feature)
+  feature)
+
+(xdef provide ac-provide)
+
+(define (arequire lib)
+  (or (ac-feature? lib)
+      (aload (symbol->string lib))
+      ar-t))
+
+(xdef require arequire)
+
 (define (aload1 p)
   (let ((x (read p)))
     (if (eof-object? x)
@@ -1113,10 +1153,10 @@
           (atests1 p)))))
 
 (define (aload filename)
-  (call-with-input-file filename aload1))
+  (call-with-input-file (aresolve filename) aload1))
 
 (define (test filename)
-  (call-with-input-file filename atests1))
+  (call-with-input-file (aresolve filename) atests1))
 
 (define (acompile1 ip op)
   (let ((x (read ip)))
@@ -1132,7 +1172,8 @@
 ; compile xx.arc to xx.arc.scm
 ; useful to examine the Arc compiler output
 (define (acompile inname)
-  (let ((outname (string-append inname ".scm")))
+  (let ((inname (aresolve inname))
+        (outname (string-append inname ".scm")))
     (if (file-exists? outname)
         (delete-file outname))
     (call-with-input-file inname

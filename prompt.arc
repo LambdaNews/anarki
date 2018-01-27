@@ -117,3 +117,4 @@
         (prn (if err "Error: " "")
              (ellipsize (tostring (write val)) 800)))))
 
+(provide 'prompt)

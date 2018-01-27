@@ -78,3 +78,4 @@
 (def lpar () (pr "("))
 (def rpar () (pr ")"))
 
+(provide 'pprint)

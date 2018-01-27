@@ -2614,4 +2614,4 @@ first asterisk isn't whitespace.
       (each c (dedup (map downcase (trues [uvar _ topcolor] (users))))
         (tr (td c) (tdcolor (hex>color c) (hspace 30)))))))
 
-
+(provide 'news)

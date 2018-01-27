@@ -1,7 +1,9 @@
-(map load '("strings.arc"
-            "pprint.arc"
-            "code.arc"
-            "html.arc"
-            "srv.arc"
-            "app.arc"
-            "prompt.arc"))
+(require 'strings)
+(require 'pprint)
+(require 'code)
+(require 'html)
+(require 'srv)
+(require 'app)
+(require 'prompt)
+
+(provide 'libs)

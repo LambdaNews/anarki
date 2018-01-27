@@ -414,3 +414,5 @@
        (if ,g
            (tag (font color ,g) ,@body)
            (do ,@body)))))
+
+(provide 'html)

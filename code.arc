@@ -59,3 +59,5 @@
 ;(top40 (space-eaters allfiles*))
 
 (mac flatlen args `(len (flat ',args)))
+
+(provide 'code)

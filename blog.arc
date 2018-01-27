@@ -92,4 +92,4 @@
   (load-posts)
   (asv))
 
-
+(provide 'blog)

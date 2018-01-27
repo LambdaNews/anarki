@@ -1444,7 +1444,7 @@
 )
 
 (def load (file)
-  (w/infile f file
+  (w/infile f (resolve file)
     (w/uniq eof
       (whiler e (read f eof) eof
         (eval e)))))
@@ -1699,3 +1699,4 @@
 ;  (let bb (n-of 1000 (rand 50)) (time10 (bestn 100 > bb)))
 ;  time: 2237 msec.  -> now down to 850 msec
 
+(provide 'arc)
