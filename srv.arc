@@ -24,7 +24,7 @@
 (def ensure-srvdirs ()
   (map ensure-dir (list arcdir* logdir* staticdir*)))
 
-(= srv-noisy* nil)
+(= srv-noisy* (getenv "ARC_DEBUG"))
 
 ; http requests currently capped at 2 meg by socket-accept
 
