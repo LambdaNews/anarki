@@ -205,9 +205,7 @@ Connection: close"))
   ip    nil)
 
 (def prrn args
-  (let x (tostring (apply prn args))
-    (each line (lines x)
-      (pr line "\r\n"))))
+  (pr:subst "\r\n" "\n" (tostring:apply prn args)))
 
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
