@@ -1,1 +1,1 @@
-web: narc/bin/arc -e '(aload "news.arc")' -e '(arc-eval (quote (nsv (getenv "PORT"))))'
+web: bin/narc -e '(aload "news.arc")' -e '(arc-eval (quote (nsv:int:getenv "PORT")))'
