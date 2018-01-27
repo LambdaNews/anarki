@@ -853,12 +853,6 @@
       (write-char #\return o))
     (write-char c o)))
 
-(define (write-byte* b o)
-  (unless (eqv? b 13)
-    (if (eqv? b 10)
-      (write-byte 13 o))
-    (write-byte b o)))
-
 (xdef writec (lambda (c . args) 
                 (write-char* c
                             (if (pair? args) 
@@ -867,7 +861,7 @@
                 c))
 
 (xdef writeb (lambda (b . args) 
-                (write-byte* b
+                (write-byte b
                             (if (pair? args) 
                                 (car args) 
                                 (current-output-port)))
