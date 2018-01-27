@@ -6,6 +6,6 @@
   "author": "Shawn Presser <shawnpresser@gmail.com>",
   "license": "MIT",
   "bin": {
-    "narc": "bin/narc"
+    "narc": "./bin/narc"
   }
 }
