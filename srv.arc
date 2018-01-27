@@ -206,10 +206,6 @@ Connection: close"))
 
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
-(def prrn args
-  (map [pr _ "\r\n"]
-       (lines:tostring:apply prn args)))
-
 (def respond (str op args cooks ip)
   (w/stdout str
     (iflet f (srvops* op)
