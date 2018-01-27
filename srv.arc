@@ -133,7 +133,7 @@
         (whilet c (and (> n 0) (readc i))
           (if srv-noisy* (pr c))
           (-- n)
-          (push c line)) 
+          (unless (is c #\return) (push c line)))
         (if srv-noisy* (pr "\n\n"))
         (respond o op (+ (parseargs (string (rev line))) args) cooks ip))))
 
@@ -205,7 +205,7 @@ Connection: close"))
   ip    nil)
 
 (def prrn args
-  (pr:subst "\r\n" "\n" (tostring:apply prn args)))
+  (pr:subst "\n" "\n" (tostring:apply prn args)))
 
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
@@ -374,7 +374,7 @@ Connection: close"))
 
 (defop-raw a (str req)
   (aif (fns* (sym (arg req "fnid")))
-       (tostring (it req))))
+       (subst "\n" "\n" (tostring (it req)))))
 
 (defopr r req
   (aif (fns* (sym (arg req "fnid")))

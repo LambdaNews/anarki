@@ -847,15 +847,27 @@
                                       (current-input-port)))))
                 (if (eof-object? c) ar-nil c))))
 
+(define (write-char* c o)
+  (unless (eqv? c #\return)
+    (if (eqv? c #\newline)
+      (write-char #\return o))
+    (write-char c o)))
+
+(define (write-byte* b o)
+  (unless (eqv? b 13)
+    (if (eqv? b 10)
+      (write-byte 13 o))
+    (write-byte b o)))
+
 (xdef writec (lambda (c . args) 
-                (write-char c 
+                (write-char* c
                             (if (pair? args) 
                                 (car args) 
                                 (current-output-port)))
                 c))
 
 (xdef writeb (lambda (b . args) 
-                (write-byte b 
+                (write-byte* b
                             (if (pair? args) 
                                 (car args) 
                                 (current-output-port)))
