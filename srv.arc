@@ -154,6 +154,7 @@ Connection: close"))
      '((gif       "image/gif")
        (jpg       "image/jpeg")
        (png       "image/png")
+       (text/css  "text/css; charset=utf-8")
        (text/html "text/html; charset=utf-8")))
 
 (= rdheader* "HTTP/1.0 302 Moved")
@@ -205,9 +206,9 @@ Connection: close"))
 
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
-(def prrn (x)
+(def prrn args
   (map [pr _ "\r\n"]
-       (lines:tostring:prn x)))
+       (lines:tostring:apply prn args)))
 
 (def respond (str op args cooks ip)
   (w/stdout str
@@ -217,7 +218,7 @@ Connection: close"))
                  (do (prrn rdheader*)
                      (prrn "Location: " (f str req))
                      (prrn))
-                 (do (prrn header*)
+                 (do (prrn:type-header*:static-filetype op)
                      (awhen (max-age* op)
                        (prrn "Cache-Control: max-age=" it))
                      (f str req))))
@@ -240,7 +241,7 @@ Connection: close"))
            "jpg"  'jpg
            "jpeg" 'jpg
            "png"  'png
-           "css"  'text/html
+           "css"  'text/css
            "txt"  'text/html
            "htm"  'text/html
            "html" 'text/html
