@@ -187,7 +187,7 @@ Connection: close"))
   (w/uniq gs
     `(do (wipe (redirector* ',name))
          (defop-raw ,name (,gs ,parm) 
-           (w/stdout ,gs (prn) ,@body)))))
+           (w/stdout ,gs (prrn) ,@body)))))
 
 ; Defines op as a redirector.  Its retval is new location.
 
@@ -332,7 +332,7 @@ Connection: close"))
      it))
 
 ;(defop test-afnid req
-;  (tag (a href (url-for (afnid (fn (req) (prn) (pr "my fnid is " it)))))
+;  (tag (a href (url-for (afnid (fn (req) (prrn) (pr "my fnid is " it)))))
 ;    (pr "click here")))
 
 ; To be more sophisticated, instead of killing fnids, could first 
@@ -388,7 +388,7 @@ Connection: close"))
   (string fnurl* "?fnid=" fnid))
 
 (def flink (f)
-  (string fnurl* "?fnid=" (fnid (fn (req) (prn) (f req)))))
+  (string fnurl* "?fnid=" (fnid (fn (req) (prrn) (f req)))))
 
 (def rflink (f)
   (string rfnurl* "?fnid=" (fnid f)))
@@ -442,12 +442,12 @@ Connection: close"))
   (w/uniq ga
     `(tag (form method 'post action fnurl*)
        (fnid-field (fnid (fn (,ga)
-                           (prn)
+                           (prrn)
                            (,f ,ga))))
        ,@body)))
 
 ;(defop test1 req
-;  (fnform (fn (req) (prn) (pr req))
+;  (fnform (fn (req) (prrn) (pr req))
 ;          (fn () (single-input "" 'foo 20 "submit"))))
  
 ;(defop test2 req
@@ -460,7 +460,7 @@ Connection: close"))
 (mac taform (lasts f . body)
   (w/uniq (gl gf gi ga)
     `(withs (,gl ,lasts
-             ,gf (fn (,ga) (prn) (,f ,ga)))
+             ,gf (fn (,ga) (prrn) (,f ,ga)))
        (tag (form method 'post action fnurl*)
          (fnid-field (if ,gl (timed-fnid ,gl ,gf) (fnid ,gf)))
          ,@body))))
