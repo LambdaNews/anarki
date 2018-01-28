@@ -546,7 +546,7 @@ function vote(node) {
 
 ; redefined later
 
-(= welcome-url* "welcome")
+(= welcome-url* "news")
 
 (def toprow (user label)
   (w/bars 
