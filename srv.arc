@@ -187,7 +187,7 @@ Connection: close"))
   (w/uniq gs
     `(do (wipe (redirector* ',name))
          (defop-raw ,name (,gs ,parm) 
-           (w/stdout ,gs (prrn) ,@body)))))
+           (w/stdout ,gs (prn) ,@body)))))
 
 ; Defines op as a redirector.  Its retval is new location.
 
@@ -204,9 +204,6 @@ Connection: close"))
   cooks nil
   ip    nil)
 
-(def prrn args
-  (pr:subst "\n" "\n" (tostring:apply prn args)))
-
 (= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
 
 (def respond (str op args cooks ip)
@@ -214,19 +211,19 @@ Connection: close"))
     (iflet f (srvops* op)
            (let req (inst 'request 'args args 'cooks cooks 'ip ip)
              (if (redirector* op)
-                 (do (prrn rdheader*)
-                     (prrn "Location: " (f str req))
-                     (prrn))
-                 (do (prrn header*)
+                 (do (prn rdheader*)
+                     (prn "Location: " (f str req))
+                     (prn))
+                 (do (prn header*)
                      (awhen (max-age* op)
-                       (prrn "Cache-Control: max-age=" it))
+                       (prn "Cache-Control: max-age=" it))
                      (f str req))))
            (let filetype (static-filetype op)
              (aif (and filetype (file-exists (string staticdir* op)))
-                  (do (prrn (type-header* filetype))
+                  (do (prn (type-header* filetype))
                       (awhen static-max-age*
-                        (prrn "Cache-Control: max-age=" it))
-                      (prrn)
+                        (prn "Cache-Control: max-age=" it))
+                      (prn)
                       (w/infile i it
                         (whilet b (readb i)
                           (writeb b str))))
@@ -249,8 +246,8 @@ Connection: close"))
 
 (def respond-err (str msg . args)
   (w/stdout str
-    (prrn header*)
-    (prrn)
+    (prn header*)
+    (prn)
     (apply pr msg args)))
 
 (def parseheader (lines)
@@ -332,7 +329,7 @@ Connection: close"))
      it))
 
 ;(defop test-afnid req
-;  (tag (a href (url-for (afnid (fn (req) (prrn) (pr "my fnid is " it)))))
+;  (tag (a href (url-for (afnid (fn (req) (prn) (pr "my fnid is " it)))))
 ;    (pr "click here")))
 
 ; To be more sophisticated, instead of killing fnids, could first 
@@ -388,7 +385,7 @@ Connection: close"))
   (string fnurl* "?fnid=" fnid))
 
 (def flink (f)
-  (string fnurl* "?fnid=" (fnid (fn (req) (prrn) (f req)))))
+  (string fnurl* "?fnid=" (fnid (fn (req) (prn) (f req)))))
 
 (def rflink (f)
   (string rfnurl* "?fnid=" (fnid f)))
@@ -442,12 +439,12 @@ Connection: close"))
   (w/uniq ga
     `(tag (form method 'post action fnurl*)
        (fnid-field (fnid (fn (,ga)
-                           (prrn)
+                           (prn)
                            (,f ,ga))))
        ,@body)))
 
 ;(defop test1 req
-;  (fnform (fn (req) (prrn) (pr req))
+;  (fnform (fn (req) (prn) (pr req))
 ;          (fn () (single-input "" 'foo 20 "submit"))))
  
 ;(defop test2 req
@@ -460,7 +457,7 @@ Connection: close"))
 (mac taform (lasts f . body)
   (w/uniq (gl gf gi ga)
     `(withs (,gl ,lasts
-             ,gf (fn (,ga) (prrn) (,f ,ga)))
+             ,gf (fn (,ga) (prn) (,f ,ga)))
        (tag (form method 'post action fnurl*)
          (fnid-field (if ,gl (timed-fnid ,gl ,gf) (fnid ,gf)))
          ,@body))))
