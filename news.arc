@@ -53,6 +53,7 @@
   by         nil
   ip         nil
   time       (seconds)
+  recent     (seconds) ; last activity time
   url        nil
   title      nil
   text       nil
@@ -297,6 +298,8 @@
   (in (downcase (last (tokens url #\.))) "png" "jpg" "jpeg"))
 
 (def item-age (i) (minutes-since i!time))
+
+(def story-recency (s) (minutes-since s!recent))
 
 (def user-age (u) (minutes-since (uvar u created)))
 
@@ -805,7 +808,8 @@ function vote(node) {
   (listpage user (msec) (newstories user maxend*) "new" "New Links" "newest"))
 
 (def newstories (user n)
-  (retrieve n [cansee user _] stories*))
+  (let xs (retrieve n [cansee user _] stories*)
+    (sort (compare < story-recency) xs)))
 
 
 (newsop best () (bestpage user))
@@ -1964,6 +1968,9 @@ function vote(node) {
     (= (items* c!id) c)
     (push c!id parent!kids)
     (save-item parent)
+    (whenlet s (superparent c)
+      (= s!recent (seconds))
+      (save-item s))
     (push c comments*)
     c))
 
