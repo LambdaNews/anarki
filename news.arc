@@ -53,7 +53,7 @@
   by         nil
   ip         nil
   time       (seconds)
-  recent     (seconds) ; last activity time
+  activity   (seconds)
   url        nil
   title      nil
   text       nil
@@ -299,7 +299,7 @@
 
 (def item-age (i) (minutes-since i!time))
 
-(def story-recency (s) (minutes-since s!recent))
+(def story-activity (s) (minutes-since s!activity))
 
 (def user-age (u) (minutes-since (uvar u created)))
 
@@ -809,7 +809,7 @@ function vote(node) {
 
 (def newstories (user n)
   (let xs (retrieve n [cansee user _] stories*)
-    (sort (compare < story-recency) xs)))
+    (sort (compare < story-activity) xs)))
 
 
 (newsop best () (bestpage user))
