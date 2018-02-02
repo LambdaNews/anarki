@@ -1978,7 +1978,7 @@ function vote(node) {
     (push c!id parent!kids)
     (save-item parent)
     (whenlet s (superparent c)
-      (= s!recent (seconds))
+      (= s!activity (seconds))
       (save-item s))
     (push c comments*)
     c))
