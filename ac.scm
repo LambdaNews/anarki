@@ -8,6 +8,7 @@
 (require (lib "pretty.ss"))
 (require (lib "foreign.ss"))
 (require racket/unsafe/ops)
+(require json)
 (require (only racket/base syntax->datum memf memq member))
 (unsafe!)
 
@@ -1194,6 +1195,11 @@
 
 (xdef eval (lambda (e)
               (eval (ac e '()))))
+
+(xdef scheme-eval eval)
+
+(xdef json-parse string->jsexpr)
+(xdef json-stringify jsexpr->string)
 
 ; If an err occurs in an on-err expr, no val is returned and code
 ; after it doesn't get executed.  Not quite what I had in mind.
