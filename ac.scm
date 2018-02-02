@@ -1201,6 +1201,9 @@
 (xdef json-parse string->jsexpr)
 (xdef json-stringify jsexpr->string)
 
+(xdef read-json read-json)
+(xdef write-json write-json)
+
 ; If an err occurs in an on-err expr, no val is returned and code
 ; after it doesn't get executed.  Not quite what I had in mind.
 

@@ -846,6 +846,12 @@
     (mvfile tmpfile file))
   val)
 
+(def dispfile (val file)
+  (let tmpfile (+ file ".tmp")
+    (w/outfile o tmpfile (disp val o))
+    (mvfile tmpfile file))
+  val)
+
 (def sym (x) (coerce x 'sym))
 
 (def int (x (o b 10)) (coerce x 'int b))
@@ -1065,12 +1071,47 @@
                            `(list ',k ,v))
                          (pair args)))))
 
+(def keyjs (x)
+  (sym:tostring:write x))
+
+(def jskey (x)
+  (read:string x))
+
+(def valjs (x)
+  (case (type x)
+    int (string x)
+    sym (string x)
+    string (tostring:write x)
+    table (tabjs x)
+    cons (map valjs x)
+    x))
+
+(def jsval (x)
+  (case (type x)
+    string (read x)
+    table (jstab x)
+    cons (map jsval x)
+    x))
+
+(def tabjs (h)
+  (let h2 (table)
+    (maptable (fn (k v)
+                (= (h2 (keyjs k)) (valjs v)))
+              h)
+    h2))
+
+(def jstab (h)
+  (let h2 (table)
+    (maptable (fn (k v)
+                (= (h2 (jskey k)) (jsval v)))
+              h)
+    h2))
+
 (def load-table (file (o eof))
   (w/infile i file (read-table i eof)))
 
 (def read-table ((o i (stdin)) (o eof))
-  (let e (read i eof)
-    (if (alist e) (listtab e) e)))
+  (jstab:read-json i))
 
 (def load-tables (file)
   (w/infile i file
@@ -1078,10 +1119,10 @@
       (drain (read-table i eof) eof))))
 
 (def save-table (h file)
-  (writefile (tablist h) file))
+  (dispfile (json-stringify:tabjs h) file))
 
 (def write-table (h (o o (stdout)))
-  (write (tablist h) o))
+  (disp (json-stringify:tabjs h) o))
 
 (def copy (x . args)
   (let x2 (case (type x)
@@ -1244,7 +1285,7 @@
 ; To write something to be read by temread, (write (tablist x))
 
 (def temread (tem (o str (stdin)))
-  (templatize tem (read str)))
+  (templatize tem (tablist:jstab:read-json str)))
 
 ; Converts alist to inst; ugly; maybe should make this part of coerce.
 ; Note: discards fields not defined by the template.
