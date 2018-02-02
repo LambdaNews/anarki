@@ -49,6 +49,8 @@
 
 (deftem item
   id         nil
+  hnid       nil
+  hnscore    nil
   type       nil
   by         nil
   ip         nil
@@ -268,15 +270,20 @@
 (= gravity* 1.8 timebase* 120 front-threshold* 1 
    nourl-factor* .4 lightweight-factor* .3 )
 
+(def hn-rank (s)
+  (whenlet id s!hnid
+    (len:mem id hn-topstories*)))
+
 (def frontpage-rank (s (o scorefn realscore) (o gravity gravity*))
-  (* (/ (let base (- (scorefn s) 1)
-          (if (> base 0) (expt base .8) base))
-        (expt (/ (+ (item-age s) timebase*) 60) gravity))
-     (if (no (in s!type 'story 'poll))  .5
-         (blank s!url)                  nourl-factor*
-         (lightweight s)                (min lightweight-factor* 
-                                             (contro-factor s))
-                                        (contro-factor s))))
+  (or (hn-rank s)
+      (* (/ (let base (- (scorefn s) 1)
+              (if (> base 0) (expt base .8) base))
+            (expt (/ (+ (item-age s) timebase*) 60) gravity))
+         (if (no (in s!type 'story 'poll))  .5
+             (blank s!url)                  nourl-factor*
+             (lightweight s)                (min lightweight-factor* 
+                                                 (contro-factor s))
+                                            (contro-factor s)))))
 
 (def contro-factor (s)
   (aif (check (visible-family nil s) [> _ 20])
@@ -1088,7 +1095,7 @@ function vote(node) {
 
 (def itemscore (i (o user))
   (tag (span id (+ "score_" i!id))
-    (pr (plural (if (is i!type 'pollopt) (realscore i) i!score)
+    (pr (plural (if (is i!type 'pollopt) (realscore i) (or i!hnscore i!score))
                 "point")))
   (hook 'itemscore i user))
 
@@ -1529,10 +1536,10 @@ function vote(node) {
                    ; "sampasite"  "multiply" "wetpaint" ; all spam, just ban
                    "eurekster" "blogsome" "edogo" "blog" "com"))
 
-(def create-story (url title text user ip)
+(def create-story (url title text user ip hnid hnscore)
   (newslog ip user 'create url (list title))
   (let s (inst 'item 'type 'story 'id (new-item-id) 
-                     'url url 'title title 'text text 'by user 'ip ip)
+                     'url url 'title title 'text text 'by user 'ip ip 'hnid hnid 'hnscore hnscore)
     (save-item s)
     (= (items* s!id) s)
     (unless (blank url) (register-url s url))
@@ -1866,6 +1873,8 @@ function vote(node) {
 
 (def standard-item-fields (i a e x)
        `((int     votes     ,(len i!votes) ,a ,nil)
+         (int     hnid      ,i!hnid        ,t ,a)
+         (int     hnscore   ,i!hnscore     ,t ,a)
          (int     score     ,i!score       ,t ,a)
          (int     sockvotes ,i!sockvotes   ,a ,a)
          (yesno   dead      ,i!dead        ,e ,e)
@@ -2572,5 +2581,31 @@ first asterisk isn't whitespace.
     (tab 
       (each c (dedup (map downcase (trues [uvar _ topcolor] (users))))
         (tr (td c) (tdcolor (hex>color c) (hspace 30)))))))
+
+(def process-hn-story (user url title showtext text ip hnid hnscore)
+  (aif (and (~blank url) (live-story-w/url url))
+       (do (= it!hnscore hnscore)
+           (item-url it!id))
+       (let s (create-story url title text user ip hnid hnscore)
+         (submit-item user s)
+         "newest")))
+
+(= hn-items* (table))
+(= hn-topstories* (list))
+
+(def hn-story (id)
+  (or (hn-items* id)
+      (= (hn-items* id) (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/item/@(do id).json?print=pretty"))))
+
+(defbg update-stories 10
+  (let topstories (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty")
+    (= hn-topstories* topstories)
+    (each id (cut topstories 0 40)
+      (let story (hn-story id)
+        (prn story)
+        (let s (process-hn-story (ensure-news-user (or story!by "root")) story!url story!title story!text story!text "127.0.0.1" story!id story!score)
+          (prn s))))
+    (gen-topstories)))
+
 
 (provide 'news)
