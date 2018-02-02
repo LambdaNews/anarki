@@ -815,8 +815,7 @@ function vote(node) {
   (listpage user (msec) (newstories user maxend*) "new" "New Links" "newest"))
 
 (def newstories (user n)
-  (let xs (retrieve n [cansee user _] stories*)
-    (sort (compare < story-activity) xs)))
+  (bestn n (compare < story-activity) (visible user stories*)))
 
 
 (newsop best () (bestpage user))
