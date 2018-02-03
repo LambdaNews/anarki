@@ -134,7 +134,7 @@
   (logout-user user))
   
 (def set-pw (user pw)
-  (= (hpasswords* user) (and pw (shash pw)))
+  (= (hpasswords* user) (and pw (bcrypt pw)))
   (save-table hpasswords* hpwfile*))
 
 (def hello-page (user ip)
@@ -212,7 +212,9 @@
 
 (def good-login (user pw ip)
   (let record (list (seconds) ip user)
-    (if (and user pw (aand (shash pw) (is it (hpasswords* user))))
+    (when (and user pw (aand (shash pw) (is it (hpasswords* user))))
+      (set-pw user pw))
+    (if (and user pw (bcrypt pw (hpasswords* user)))
         (do (unless (user->cookie* user) (cook-user user))
             (enq-limit record good-logins*)
             user)
@@ -230,6 +232,16 @@
       (do1 (cut res 0 (- (len res) 1))
            (rmfile fname)))))
 
+(def bcrypt (str (o hash))
+  (let program (if (isa hash 'string)
+                   (+ "python -c 'import bcrypt; import sys; sys.stdout.write(str(1 if bcrypt.checkpw(sys.stdin.read(), sys.argv[1]) else 0))' '" hash "'")
+                   "python -c 'import bcrypt; import sys; sys.stdout.write(bcrypt.hashpw(sys.stdin.read(), bcrypt.gensalt(14)))'")
+  (let fname (+ "/tmp/bcrypt" (rand-string 10))
+    (w/outfile f fname (disp str f))
+    (let res (tostring (system (+ program " <" fname)))
+      (do1 (if (isa hash 'string) (is res "1") res)
+           (rmfile fname))))))
+
 (= dc-usernames* (table))
 
 (def username-taken (user)
@@ -237,6 +249,8 @@
     (each (k v) hpasswords*
       (set (dc-usernames* (downcase k)))))
   (dc-usernames* (downcase user)))
+
+(= username-enabled* idfn)
 
 (def bad-newacct (user pw)
   (if (no (goodname user 2 15))
@@ -248,7 +262,9 @@
       (or (no pw) (< (len pw) 4))
        "Passwords should be a least 4 characters long.  Please 
         choose another."
-       nil))
+      (let x (username-enabled* user)
+        (if (isa x 'string) x
+          (is x t) nil t))))
 
 (def goodname (str (o min 1) (o max nil))
   (and (isa str 'string)
