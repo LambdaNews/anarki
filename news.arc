@@ -122,7 +122,8 @@
 (def votes (u)
   (or (votes* u)
       (aand (exists-firebase (+ votedir* u))
-            (= (votes* u) (load-table it)))))
+            (= (votes* u) (load-table it)))
+      (= (votes* u) (table))))
           
 (def init-user (u)
   (= (votes* u) (table) 
