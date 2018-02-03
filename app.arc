@@ -250,7 +250,7 @@
       (set (dc-usernames* (downcase k)))))
   (dc-usernames* (downcase user)))
 
-(= username-enabled* idfn)
+(= username-enabled* [do t])
 
 (def bad-newacct (user pw)
   (if (no (goodname user 2 15))
