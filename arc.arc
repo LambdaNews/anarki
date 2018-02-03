@@ -1116,7 +1116,8 @@
       (w/outfile f fname (disp js f))
       (let x (+ "curl -fsSL -X PUT -d " #\@ fname " 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
         (disp (+ x "\n") (stderr))
-        (tostring:system x)))))
+        (do1 (tostring:system x)
+             (rmfile fname))))))
 
 (def load-firebase (file)
   (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
