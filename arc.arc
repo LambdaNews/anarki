@@ -1078,20 +1078,24 @@
   (read:string x))
 
 (def valjs (x)
-  (case (type x)
-    int (string x)
-    sym (string x)
-    string (tostring:write x)
-    table (tabjs x)
-    cons (map valjs x)
-    x))
+  (if (is x #t) #t
+      (is x #f) #f
+    (case (type x)
+      int (string x)
+      sym (string x)
+      string (tostring:write x)
+      table (tabjs x)
+      cons (map valjs x)
+      x)))
 
 (def jsval (x)
-  (case (type x)
-    string (read x)
-    table (jstab x)
-    cons (map jsval x)
-    x))
+  (if (is x #t) #t
+      (is x #f) #f
+    (case (type x)
+      string (read x)
+      table (jstab x)
+      cons (map jsval x)
+      x)))
 
 (def tabjs (h)
   (let h2 (table)
@@ -1102,13 +1106,37 @@
 
 (def jstab (h)
   (let h2 (table)
-    (maptable (fn (k v)
-                (= (h2 (jskey k)) (jsval v)))
-              h)
+    (unless (is h 'null)
+        (maptable (fn (k v)
+                    (= (h2 (jskey k)) (jsval v)))
+                  h))
     h2))
 
+(def save-firebase (h file)
+  (let js (json-stringify:tabjs h)
+    (let x (+ "curl -fsSL -X PUT -d " (tostring:write js) " 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
+      (disp (+ x "\n") (stderr))
+      (tostring:system x))))
+
+(def load-firebase (file)
+  (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
+    (disp (+ x "\n") (stderr))
+    (let chars (tostring:system x)
+      (json-parse chars))))
+
+(def exists-firebase (file)
+  (~is (load-firebase file) 'null))
+
+(def dir-firebase (file)
+  (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?shallow=true&access_token=" (getenv "ARC_TOKEN") "'")
+    (let chars (tostring:system x)
+      (unless (is chars "null")
+        (map car (tablist:jstab:json-parse chars))))))
+
 (def load-table (file (o eof))
-  (w/infile i file (read-table i eof)))
+  ;(if (file-exists file)
+  ;    (w/infile i file (read-table i eof))
+    (jstab:load-firebase file))
 
 (def read-table ((o i (stdin)) (o eof))
   (jstab:read-json i))
@@ -1119,7 +1147,9 @@
       (drain (read-table i eof) eof))))
 
 (def save-table (h file)
-  (dispfile (json-stringify:tabjs h) file))
+  (if (getenv "ARC_TOKEN")
+      (save-firebase h file)
+      (dispfile (json-stringify:tabjs h) file)))
 
 (def write-table (h (o o (stdout)))
   (disp (json-stringify:tabjs h) o))
@@ -1298,7 +1328,8 @@
     x))
 
 (def temload (tem file)
-  (w/infile i file (temread tem i)))
+  ;(w/infile i file (temread tem i)))
+  (templatize tem (tablist:jstab:load-firebase file)))
 
 (def temloadall (tem file)
   (map (fn (pairs) (templatize tem pairs))       

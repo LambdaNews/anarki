@@ -110,12 +110,12 @@
 (def profile (u)
   (or (profs* u)
       (aand (goodname u)
-            (file-exists (+ profdir* u))
+            (exists-firebase (+ profdir* u))
             (= (profs* u) (temload 'profile it)))))
 
 (def votes (u)
   (or (votes* u)
-      (aand (file-exists (+ votedir* u))
+      (aand (exists-firebase (+ votedir* u))
             (= (votes* u) (load-table it)))))
           
 (def init-user (u)
@@ -170,7 +170,7 @@
   (system (+ "rm " storydir* "*.tmp"))
   (pr "load items: ") 
   (with (items (table)
-         ids   (sort > (map int (dir storydir*))))
+         ids   (sort > (map int (dir-firebase storydir*))))
     (if ids (= maxid* (car ids)))
     (noisy-each 100 id (firstn initload* ids)
       (let i (load-item id)
@@ -214,7 +214,7 @@
       url))
 
 (def new-item-id ()
-  (evtil (++ maxid*) [~file-exists (+ storydir* _)]))
+  (evtil (++ maxid*) [~exists-firebase (+ storydir* _)]))
 
 (def item (id)
   (or (items* id) (errsafe:load-item id)))
@@ -921,6 +921,7 @@ function vote(node) {
     (pr "More")))
 
 (def display-story (i s user whence)
+  (ero 'display-story i s user whence)
   (when (or (cansee user s) (s 'kids))
     (tr (display-item-number i)
         (td (votelinks s user whence))
