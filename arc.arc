@@ -1112,9 +1112,11 @@
 
 (def save-firebase (h file)
   (let js (json-stringify:tabjs h)
-    (let x (+ "curl -fsSL -X PUT -d " (tostring:write js) " 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
-      (disp (+ x "\n") (stderr))
-      (tostring:system x))))
+    (let fname (+ "/tmp/firebase-" (rand-string 10))
+      (w/outfile f fname (disp js f))
+      (let x (+ "curl -fsSL -X PUT -d " #\@ fname " 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
+        (disp (+ x "\n") (stderr))
+        (tostring:system x)))))
 
 (def load-firebase (file)
   (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
