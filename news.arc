@@ -1558,7 +1558,7 @@ function vote(node) {
                    ; "sampasite"  "multiply" "wetpaint" ; all spam, just ban
                    "eurekster" "blogsome" "edogo" "blog" "com"))
 
-(def create-story (url title text user ip hnid hnscore)
+(def create-story (url title text user ip (o hnid) (o hnscore))
   (newslog ip user 'create url (list title))
   (let s (inst 'item 'type 'story 'id (new-item-id) 
                      'url url 'title title 'text text 'by user 'ip ip 'hnid hnid 'hnscore hnscore)
