@@ -930,7 +930,6 @@ function vote(node) {
     (pr "More")))
 
 (def display-story (i s user whence)
-  (ero 'display-story i s user whence)
   (when (or (cansee user s) (s 'kids))
     (tr (display-item-number i)
         (td (votelinks s user whence))
@@ -2611,9 +2610,10 @@ first asterisk isn't whitespace.
     (= hn-topstories* topstories)
     (each id (cut topstories 0 40)
       (let story (hn-story id)
-        (prn story)
+        ;(prn story)
         (let s (process-hn-story (ensure-news-user (or story!by "root")) story!url story!title story!text story!text "127.0.0.1" story!id story!score)
-          (prn s))))
+          ;(prn s)
+          )))
     (gen-topstories)))
 
 

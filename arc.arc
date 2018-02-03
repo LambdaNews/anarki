@@ -1078,30 +1078,28 @@
   (read:string x))
 
 (def valjs (x)
-  (if (is x #t) #t
-      (is x #f) #f
-    (case (type x)
-      int (string x)
-      sym (string x)
-      string (tostring:write x)
-      table (tabjs x)
-      cons (map valjs x)
-      x)))
+  (case (type x)
+    int (string x)
+    sym (string x)
+    string (tostring:write x)
+    table (tabjs x)
+    cons (map valjs x)
+    x))
 
 (def jsval (x)
-  (if (is x #t) #t
-      (is x #f) #f
-    (case (type x)
-      string (read x)
-      table (jstab x)
-      cons (map jsval x)
-      x)))
+  (case (type x)
+    string (read x)
+    table (jstab x)
+    cons (map jsval x)
+    x))
 
 (def tabjs (h)
   (let h2 (table)
     (maptable (fn (k v)
                 (= (h2 (keyjs k)) (valjs v)))
               h)
+    ;(when (empty h2)
+    ;  (= (h2 '_empty) "true"))
     h2))
 
 (def jstab (h)
@@ -1357,7 +1355,9 @@
 (def temloadall (tem file (o n) (o end))
   ;(map (fn (pairs) (templatize tem pairs))       
   ;     (w/infile in file (readall in))))
-  (firebase-list:jsval:firebase-fetch file n end))
+  (map (fn ((k h))
+         (list k (templatize tem (tablist h))))
+       (firebase-list:jsval:firebase-fetch file n end)))
 
 
 (def number (n) (in (type n) 'int 'num))
