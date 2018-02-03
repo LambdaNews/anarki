@@ -2596,6 +2596,7 @@ first asterisk isn't whitespace.
 (= hn-items* (table))
 (= hn-topstories* (list))
 (= hn->id* (table))
+(= hn-itemcount* 100)
 
 (def hn->id (hnid)
   (or (hn->id* hnid)
@@ -2613,10 +2614,10 @@ first asterisk isn't whitespace.
   (or (hn-items* id)
       (= (hn-items* id) (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/item/@(do id).json?print=pretty"))))
 
-(defbg update-stories 10
+(def update-hn-stories ()
   (let topstories (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty")
     (= hn-topstories* topstories)
-    (each id (cut topstories 0 40)
+    (each id (cut topstories 0 hn-itemcount*)
       (let story (hn-story id)
         ;(prn story)
         (let s (process-hn-story (ensure-news-user (or story!by "root")) story!url story!title story!text story!text "127.0.0.1" story!id story!score)
@@ -2624,5 +2625,7 @@ first asterisk isn't whitespace.
           )))
     (gen-topstories)))
 
+(defbg update-stories 10
+  (update-hn-stories))
 
 (provide 'news)
