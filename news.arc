@@ -2650,11 +2650,11 @@ first asterisk isn't whitespace.
   (update-hn-stories))
 
 (def refresh-token ()
-  (putenv "ARC_TOKEN" (trim:tostring:system "cd .. && python narc.py"))
-  (getenv "ARC_TOKEN"))
+  (when (file-exists "../narc.py")
+    (putenv "ARC_TOKEN" (trim:tostring:system "cd .. && python narc.py"))
+    (getenv "ARC_TOKEN")))
 
 (defbg refresh-token 900
-  (when (file-exists "../narc.py")
-    (newslog 'refresh-token (refresh-token))))
+  (newslog 'refresh-token (refresh-token)))
 
 (provide 'news)
