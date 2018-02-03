@@ -1129,22 +1129,45 @@
 
 (def dir-firebase (file)
   (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?shallow=true&access_token=" (getenv "ARC_TOKEN") "'")
+    (disp (+ x "\n") (stderr))
     (let chars (tostring:system x)
       (unless (is chars "null")
         (map car (tablist:jstab:json-parse chars))))))
 
+(def firebase-fetch (file (o n) (o end))
+  (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?orderBy=\"$key\"&access_token=" (getenv "ARC_TOKEN"))
+    (when n
+      (++ x (+ "&limitToLast=" (int n))))
+    (when end
+      (++ x (+ "&endAt=" (tostring:write end))))
+    (++ x "'")
+    (disp (+ x "\n") (stderr))
+    (let chars (tostring:system x)
+      (unless (is chars "null")
+        (json-parse chars)))))
+
+(def firebase-list (x)
+  (case (type x)
+    table (sort (fn (a b) (< a.0 b.0)) (tablist x))
+    cons (map [list _!id _] (rem 'null x))
+    cons (err "firebase list" x)
+    x))
+
 (def load-table (file (o eof))
   ;(if (file-exists file)
   ;    (w/infile i file (read-table i eof))
-    (jstab:load-firebase file))
+  (jstab:load-firebase file))
 
 (def read-table ((o i (stdin)) (o eof))
   (jstab:read-json i))
 
-(def load-tables (file)
-  (w/infile i file
-    (w/uniq eof
-      (drain (read-table i eof) eof))))
+(def load-tables (file (o n) (o end))
+  (firebase-list:jsval:firebase-fetch file n end))
+
+;(def load-tables (file)
+;  (w/infile i file
+;    (w/uniq eof
+;      (drain (read-table i eof) eof))))
 
 (def save-table (h file)
   (if (getenv "ARC_TOKEN")
@@ -1331,9 +1354,10 @@
   ;(w/infile i file (temread tem i)))
   (templatize tem (tablist:jstab:load-firebase file)))
 
-(def temloadall (tem file)
-  (map (fn (pairs) (templatize tem pairs))       
-       (w/infile in file (readall in))))
+(def temloadall (tem file (o n) (o end))
+  ;(map (fn (pairs) (templatize tem pairs))       
+  ;     (w/infile in file (readall in))))
+  (firebase-list:jsval:firebase-fetch file n end))
 
 
 (def number (n) (in (type n) 'int 'num))

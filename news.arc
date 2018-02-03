@@ -80,7 +80,7 @@
 
 (= votes* (table) profs* (table))
 
-(= initload-users* nil)
+(= initload-users* t)
 
 (def nsv ((o port 8080))
   (map ensure-dir (list arcdir* newsdir* storydir* votedir* profdir*))
@@ -90,8 +90,14 @@
 
 (def load-users ()
   (pr "load users: ")
-  (noisy-each 100 id (dir profdir*)
-    (load-user id)))
+  ;(noisy-each 100 id (dir profdir*)
+  ;  (load-user id)))
+  (each (k u) (temloadall 'profile profdir*)
+    (= (profs* u!id) u))
+  (pr "load votes: ")
+  (each (k v) (load-tables votedir*)
+    (let u (string k)
+      (= (votes* u) v))))
 
 ; For some reason vote files occasionally get written out in a 
 ; broken way.  The nature of the errors (random missing or extra
@@ -172,8 +178,11 @@
   (with (items (table)
          ids   (sort > (map int (dir-firebase storydir*))))
     (if ids (= maxid* (car ids)))
-    (noisy-each 100 id (firstn initload* ids)
-      (let i (load-item id)
+    ;(noisy-each 100 id (firstn initload* ids)
+    ;  (let i (load-item id)
+    ;    (push i (items i!type))))
+    (noisy-each 100 (id i) (temloadall 'item storydir*)
+      (let i (load-item id i)
         (push i (items i!type))))
     (= stories*  (rev (merge (compare < !id) items!story items!poll))
        comments* (rev items!comment))
@@ -191,8 +200,8 @@
 (def acomment (i) (is i!type 'comment))
 (def apoll    (i) (is i!type 'poll))
 
-(def load-item (id)
-  (let i (temload 'item (+ storydir* id))
+(def load-item (id (o i))
+  (let i (or i (temload 'item (+ storydir* id)))
     (= (items* id) i)
     (awhen (and (astory&live i) (check i!url ~blank))
       (register-url i it))
