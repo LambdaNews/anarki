@@ -229,18 +229,21 @@
   (evtil (++ maxid*) [~exists-firebase (+ storydir* _)]))
 
 (def item (id)
-  (or (items* id) (errsafe:hn-item id) (errsafe:load-item id)))
+  (or (items* id)
+      (if (< id 0)
+          (errsafe:hn-item (- id))
+          (errsafe:load-item id))))
 
 (def kids (i) (map item i!kids))
 
 ; For use on external item references (from urls).  Checks id is int 
 ; because people try e.g. item?id=363/blank.php
 
-(def safe-item (id)
-  (ok-id&item (if (isa id 'string) (saferead id) id)))
+(def safe-item (id (o neg 1))
+  (ok-id&item (* neg (if (isa id 'string) (saferead id) id))))
 
 (def ok-id (id) 
-  (and (exact id) (<= 1 id)))
+  (exact id))
 
 (def arg->item (req key)
   (safe-item:saferead (arg req key)))
@@ -1761,10 +1764,10 @@ function vote(node) {
 ; Individual Item Page (= Comments Page of Stories)
 
 (defmemo hn-item-url (id) (+ "//news.ycombinator.com/item?id=" id))
-(defmemo item-url (id) (+ "item?id=" id))
+(defmemo item-url (id) (+ "item?id=-" id))
 
 (newsop item (id)
-  (let s (safe-item id)
+  (let s (safe-item id -1)
     (if (news-type s)
         (do (if s!deleted (note-baditem user ip))
             (item-page user s))
