@@ -204,6 +204,8 @@
 (def load-item (id (o i))
   (let i (or i (temload 'item (+ storydir* id)))
     (= (items* id) i)
+    (whenlet hnid i!hnid
+      (= (hn->id* hnid) i!id))
     (awhen (and (astory&live i) (check i!url ~blank))
       (register-url i it))
     i))
@@ -2591,16 +2593,21 @@ first asterisk isn't whitespace.
       (each c (dedup (map downcase (trues [uvar _ topcolor] (users))))
         (tr (td c) (tdcolor (hex>color c) (hspace 30)))))))
 
+(= hn-items* (table))
+(= hn-topstories* (list))
+(= hn->id* (table))
+
+(def hn->id (hnid)
+  (or (hn->id* hnid)
+      (whenlet i (find [and _ (is _!hnid hnid)] items*)
+        (= (hn->id* hnid) i!id))))
+
 (def process-hn-story (user url title showtext text ip hnid hnscore)
-  (aif (and (~blank url) (live-story-w/url url))
-       (do (= it!hnscore hnscore)
-           (item-url it!id))
+  (aif (hn->id hnid)
+       (item-url it)
        (let s (create-story url title text user ip hnid hnscore)
          (submit-item user s)
          "newest")))
-
-(= hn-items* (table))
-(= hn-topstories* (list))
 
 (def hn-story (id)
   (or (hn-items* id)
