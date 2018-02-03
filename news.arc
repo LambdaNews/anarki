@@ -229,7 +229,7 @@
   (evtil (++ maxid*) [~exists-firebase (+ storydir* _)]))
 
 (def item (id)
-  (or (items* id) (errsafe:load-item id)))
+  (or (items* id) (errsafe:hn-item id) (errsafe:load-item id)))
 
 (def kids (i) (map item i!kids))
 
@@ -240,7 +240,7 @@
   (ok-id&item (if (isa id 'string) (saferead id) id)))
 
 (def ok-id (id) 
-  (and (exact id) (<= 1 id maxid*)))
+  (and (exact id) (<= 1 id)))
 
 (def arg->item (req key)
   (safe-item:saferead (arg req key)))
@@ -1562,10 +1562,10 @@ function vote(node) {
   (newslog ip user 'create url (list title))
   (let s (inst 'item 'type 'story 'id (new-item-id) 
                      'url url 'title title 'text text 'by user 'ip ip 'hnid hnid 'hnscore hnscore)
-    (save-item s)
     (= (items* s!id) s)
     (unless (blank url) (register-url s url))
     (push s stories*)
+    (save-item s)
     s))
 
 
@@ -2612,29 +2612,35 @@ first asterisk isn't whitespace.
 
 (def hn->id (hnid)
   (or (hn->id* hnid)
-      (whenlet i (find [and _ (is _!hnid hnid)] items*)
+      (whenlet i (car:loaded-items [is _!hnid hnid])
         (= (hn->id* hnid) i!id))))
 
 (def process-hn-story (user url title showtext text ip hnid hnscore)
   (aif (hn->id hnid)
-       (item-url it)
+       (items* it)
        (let s (create-story url title text user ip hnid hnscore)
          (submit-item user s)
-         "newest")))
+         s)))
 
 (def hn-story (id)
   (or (hn-items* id)
-      (= (hn-items* id) (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/item/@(do id).json?print=pretty"))))
+      (= (hn-items* id) (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/item/@(do id).json"))))
 
-(def update-hn-stories ()
-  (let topstories (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/topstories.json?print=pretty")
-    (= hn-topstories* topstories)
-    (each id (cut topstories 0 hn-itemcount*)
+(def hn-item (id)
+  (or (aand (hn->id id)
+            (items* it))
       (let story (hn-story id)
         ;(prn story)
-        (let s (process-hn-story (ensure-news-user (or story!by "root")) story!url story!title story!text story!text "127.0.0.1" story!id story!score)
-          ;(prn s)
-          )))
+        (let u (ensure-news-user (or story!by "root"))
+          (atlet s (process-hn-story u story!url story!title story!text story!text "127.0.0.1" story!id story!score)
+            ;(prn s)
+            s)))))
+
+(def update-hn-stories ()
+  (let topstories (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/topstories.json")
+    (= hn-topstories* topstories)
+    (each id (cut topstories 0 hn-itemcount*)
+      (hn-item id))
     (gen-topstories)))
 
 (defbg update-stories 10
