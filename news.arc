@@ -942,6 +942,7 @@ function vote(node) {
           (hook 'itemline s user)
           (itemline s user)
           (when (in s!type 'story 'poll) (commentlink s user))
+          (when (in s!type 'story 'poll) (hnlink s user))
           (editlink s user)
           (when (apoll s) (addoptlink s user))
           (unless i (flaglink s user whence))
@@ -1132,6 +1133,16 @@ function vote(node) {
       (and (editor user) (< (user-age subject) 1440))
        (tostring (fontcolor noob-color* (pr subject)))
       subject))
+
+(def hnlink (i user)
+  (when i!hnid
+    (when (cansee user i) 
+      (pr bar*)
+      (tag (a href (hn-item-url i!hnid))
+        (let n ((hn-story i!hnid) 'descendants)
+          (if (> n 0)
+              (pr (plural n "HN comment"))
+              (pr "discuss on HN")))))))
 
 (= show-threadavg* nil)
 
@@ -1749,6 +1760,7 @@ function vote(node) {
 
 ; Individual Item Page (= Comments Page of Stories)
 
+(defmemo hn-item-url (id) (+ "//news.ycombinator.com/item?id=" id))
 (defmemo item-url (id) (+ "item?id=" id))
 
 (newsop item (id)
