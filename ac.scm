@@ -1456,6 +1456,8 @@
 
 (xdef getenv (lambda (name)
                (or (getenv name) ar-nil)))
+
+(xdef putenv putenv)
   
 )
 
