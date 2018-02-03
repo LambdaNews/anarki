@@ -517,7 +517,8 @@ function vote(node) {
 
   // adjust score
   var score = byId('score_' + item);
-  var newscore = parseInt(score.innerHTML) + (v[0] == 'up' ? 1 : -1);
+  var i = parseInt(score.innerHTML);
+  var newscore = (isNaN(i) ? 1 : i) + (v[0] == 'up' ? 1 : -1);
   score.innerHTML = newscore + (newscore == 1 ? ' point' : ' points');
 
   // hide arrows
@@ -1110,8 +1111,9 @@ function vote(node) {
 
 (def itemscore (i (o user))
   (tag (span id (+ "score_" i!id))
-    (pr (plural (if (is i!type 'pollopt) (realscore i) (or i!hnscore i!score))
-                "point")))
+    (when (> (or i!score 0) 1)
+      (pr (plural (if (is i!type 'pollopt) (realscore i) i!score)
+                  "point"))))
   (hook 'itemscore i user))
 
 ; redefined later
