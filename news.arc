@@ -7,11 +7,11 @@
 
 (declare 'atstrings t)
 
-(= this-site*    "News++"
-   site-url*     "http://news.ycombinator.lol/"
-   parent-url*   "http://lambdanews.io"
+(= this-site*    "Lambda News"
+   site-url*     "https://news.ycombinator.lol/"
+   parent-url*   "https://news.ycombinator.com"
    favicon-url*  ""
-   site-desc*    "News++"               ; for rss feed
+   site-desc*    "Lambda News"               ; for rss feed
    site-color*   (color 153 187 170)
    border-color* (color 153 187 170)
    prefer-url*   t)
