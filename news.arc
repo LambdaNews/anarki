@@ -1139,7 +1139,7 @@ function vote(node) {
     (when (cansee user i) 
       (pr bar*)
       (tag (a href (hn-item-url i!hnid))
-        (let n ((hn-story i!hnid) 'descendants)
+        (let n (or ((hn-story i!hnid) 'descendants) 0)
           (if (> n 0)
               (pr (plural n "HN comment"))
               (pr "discuss on HN")))))))
