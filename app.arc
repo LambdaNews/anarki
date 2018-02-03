@@ -226,6 +226,7 @@
   (let fname (+ "/tmp/shash" (rand-string 10))
     (w/outfile f fname (disp str f))
     (let res (tostring (system (+ "openssl dgst -sha1 <" fname)))
+      (= res (subst "" "(stdin)= " res))
       (do1 (cut res 0 (- (len res) 1))
            (rmfile fname)))))
 
