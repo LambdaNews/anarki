@@ -5,9 +5,11 @@
 ; arc> (bsv)
 ; go to http://localhost:8080/blog
 
-(= postdir* "arc/posts/"  maxid* 0  posts* (table))
+(defvar postdir* "arc/posts/")
+(defvar maxid* 0)
+(defvar posts* (table))
 
-(= blogtitle* "A Blog")
+(defvar blogtitle* "A Blog")
 
 (deftem post  id nil  title nil  text nil)
 

@@ -7,14 +7,14 @@
 
 (declare 'atstrings t)
 
-(= this-site*    "Lambda News"
-   site-url*     "https://news.ycombinator.lol/"
-   parent-url*   "https://news.ycombinator.com"
-   favicon-url*  ""
-   site-desc*    "Lambda News"               ; for rss feed
-   site-color*   (color 153 187 170)
-   border-color* (color 153 187 170)
-   prefer-url*   t)
+(defvar this-site*    "Lambda News")
+(defvar site-url*     "https://news.ycombinator.lol/")
+(defvar parent-url*   "https://news.ycombinator.com")
+(defvar favicon-url*  "")
+(defvar site-desc*    "Lambda News"               "for rss feed")
+(defvar site-color*   (color 153 187 170))
+(defvar border-color* (color 153 187 170))
+(defvar prefer-url*   t)
 
 
 ; Structures
@@ -73,14 +73,15 @@
 
 ; Load and Save
 
-(= newsdir*  "arc/news/"
-   storydir* "arc/news/story/"
-   profdir*  "arc/news/profile/"
-   votedir*  "arc/news/vote/")
+(defvar newsdir*  "arc/news/")
+(defvar storydir* "arc/news/story/")
+(defvar profdir*  "arc/news/profile/")
+(defvar votedir*  "arc/news/vote/")
 
-(= votes* (table) profs* (table))
+(defvar votes* (table))
+(defvar profs* (table))
 
-(= initload-users* t)
+(defvar initload-users* t)
 
 (def nsv ((o port 8080))
   (map ensure-dir (list arcdir* newsdir* storydir* votedir* profdir*))
@@ -160,9 +161,12 @@
 (def author (u i) (is u i!by))
 
 
-(= stories* nil comments* nil 
-   items* (table) url->story* (table)
-   maxid* 0 initload* 15000)
+(defvar stories* nil)
+(defvar comments* nil)
+(defvar items* (table))
+(defvar url->story* (table))
+(defvar maxid* 0)
+(defvar initload* 15000)
 
 ; The dir expression yields stories in order of file creation time 
 ; (because arc infile truncates), so could just rev the list instead of
@@ -218,7 +222,7 @@
 
 ; redefined later
 
-(= stemmable-sites* (table))
+(defvar stemmable-sites* (table))
 
 (def canonical-url (url)
   (if (stemmable-sites* (sitename url))
@@ -259,7 +263,7 @@
     (set i!dead)
     (save-item i)))
 
-(= kill-log* nil)
+(defvar kill-log* nil)
 
 (def log-kill (i how)
   (push (list i!id how) kill-log*))
@@ -282,8 +286,11 @@
 ; Votes divided by the age in hours to the gravityth power.
 ; Would be interesting to scale gravity in a slider.
 
-(= gravity* 1.8 timebase* 120 front-threshold* 1 
-   nourl-factor* .4 lightweight-factor* .3 )
+(defvar gravity* 1.8)
+(defvar timebase* 120)
+(defvar front-threshold* 1)
+(defvar nourl-factor* .4)
+(defvar lightweight-factor* .3)
 
 (def hn-rank (s)
   (whenlet id s!hnid
@@ -376,7 +383,7 @@
             [and (>= (realscore _) threshold) (cansee user _)]
             ranked-stories*))
 
-(= max-delay* 10)
+(defvar max-delay* 10)
 
 (def cansee (user i)
   (if i!deleted   (admin user)
@@ -413,7 +420,9 @@
 
 ; Page Layout
 
-(= up-url* "grayarrow.gif" down-url* "graydown.gif" logo-url* "arc.png")
+(defvar up-url* "grayarrow.gif")
+(defvar down-url* "graydown.gif")
+(defvar logo-url* "arc.png")
 
 (defopr favicon.ico req favicon-url*)
 
@@ -435,7 +444,7 @@
                      bgcolor sand)
            ,@body)))))
 
-(= pagefns* nil)
+(defvar pagefns* nil)
 
 (mac fulltop (user lid label title whence . body)
   (w/uniq (gu gi gl gt gw)
@@ -506,7 +515,7 @@
 ;.vote IMG { border:0; margin: 3px 2px 3px 2px; }
 ;.reply { font-size:smaller; text-decoration:underline !important; }
 
-(= votejs* "
+(defvar votejs* "
 function byId(id) {
   return document.getElementById(id);
 }
@@ -535,7 +544,8 @@ function vote(node) {
 
 ; Page top
 
-(= sand (color 246 246 239) textgray (gray 130))
+(defvar sand (color 246 246 239))
+(defvar textgray (gray 130))
 
 (def main-color (user) 
   (aif (and user (uvar user topcolor))
@@ -568,11 +578,11 @@ function vote(node) {
       (tag (img src logo-url* width 18 height 18 
                 style "border:1px #@(hexrep border-color*) solid;")))))
 
-(= toplabels* (list nil "welcome" "new" "threads" "comments" "leaders" "*"))
+(defvar toplabels* (list nil "welcome" "new" "threads" "comments" "leaders" "*"))
 
 ; redefined later
 
-(= welcome-url* "news")
+(defvar welcome-url* "news")
 
 (def toprow (user label)
   (w/bars 
@@ -641,7 +651,7 @@ function vote(node) {
            (newslog ip user ',name ,@parms)
            ,@body)))))
 
-(= newsop-names* nil)
+(defvar newsop-names* nil)
 
 (mac newsop args
   `(do (pushnew ',(car args) newsop-names*)
@@ -738,7 +748,7 @@ function vote(node) {
                (fn () (save-prof subject)
                       (user-page user subject)))))
 
-(= topcolor-threshold* 250)
+(defvar topcolor-threshold* 250)
 
 (def user-fields (user subject)
   (withs (e (editor user) 
@@ -791,7 +801,10 @@ function vote(node) {
 
 ; remember to set caching to 0 when testing non-logged-in 
 
-(= caching* 0 perpage* 30 threads-perpage* 10 maxend* 210)
+(defvar caching* 0)
+(defvar perpage* 30)
+(defvar threads-perpage* 10)
+(defvar maxend* 210)
 
 ; Limiting that newscache can't take any arguments except the user.
 ; To allow other arguments, would have to turn the cache from a single 
@@ -959,7 +972,7 @@ function vote(node) {
   (when i (tag (td align 'right valign 'top class 'title)
             (pr i "."))))
 
-(= follow-threshold* 5)
+(defvar follow-threshold* 5)
 
 (def titleline (s url user whence)
   (tag (td class 'title)
@@ -1017,9 +1030,10 @@ function vote(node) {
   (when (and i!deleted (admin user))
     (pr " [deleted] ")))
 
-(= downvote-threshold* 200 downvote-time* 1440)
+(defvar downvote-threshold* 200)
+(defvar downvote-time* 1440)
 
-(= votewid* 14)
+(defvar votewid* 14)
       
 (def votelinks (i user whence (o downtoo))
   (center
@@ -1061,7 +1075,7 @@ function vote(node) {
              (if user (+ "&by=" user "&auth=" (user->cookie* user)))
              "&whence=" (urlencode whence)))
 
-(= lowest-score* -4)
+(defvar lowest-score* -4)
 
 ; Not much stricter than whether to generate the arrow.  Further tests 
 ; applied in vote-for.
@@ -1123,14 +1137,14 @@ function vote(node) {
 
 (def user-url (user) (+ "user?id=" user))
 
-(= show-avg* nil)
+(defvar show-avg* nil)
 
 (def userlink (user subject (o show-avg t))
   (link (user-name user subject) (user-url subject))
   (awhen (and show-avg* (admin user) show-avg (uvar subject avg))
     (pr " (@(num it 1 t t))")))
 
-(= noob-color* (color 60 150 60))
+(defvar noob-color* (color 60 150 60))
 
 (def user-name (user subject)
   (if (and (editor user) (ignored subject))
@@ -1149,7 +1163,7 @@ function vote(node) {
               (pr (plural n "HN comment"))
               (pr "discuss on HN")))))))
 
-(= show-threadavg* nil)
+(defvar show-threadavg* nil)
 
 (def commentlink (i user)
   (when (cansee user i) 
@@ -1170,9 +1184,11 @@ function vote(node) {
   (only.avg (map [or (uvar _ avg) 1] 
                  (rem admin (dedup (map !by (keep live (family i))))))))
 
-(= user-changetime* 120 editor-changetime* 1440)
+(defvar user-changetime* 120)
+(defvar editor-changetime* 1440)
 
-(= everchange* (table) noedit* (table))
+(defvar everchange* (table))
+(defvar noedit* (table))
 
 (def canedit (user i)
   (or (admin user)
@@ -1200,7 +1216,9 @@ function vote(node) {
 
 ; reset later
 
-(= flag-threshold* 30 flag-kill-threshold* 7 many-flags* 1)
+(defvar flag-threshold* 30)
+(defvar flag-kill-threshold* 7)
+(defvar many-flags* 1)
 
 ; Un-flagging something doesn't unkill it, if it's now no longer
 ; over flag-kill-threshold.  Ok, since arbitrary threshold anyway.
@@ -1319,7 +1337,9 @@ function vote(node) {
 ; new- thresholds won't affect rankings, though such votes still affect 
 ; scores unless not a legit-user.
 
-(= legit-threshold* 0 new-age-threshold* 0 new-karma-threshold* 2)
+(defvar legit-threshold* 0)
+(defvar new-age-threshold* 0)
+(defvar new-karma-threshold* 2)
 
 (def legit-user (user) 
   (or (editor user)
@@ -1331,7 +1351,9 @@ function vote(node) {
       (and (< (user-age user) new-age-threshold*)
            (< (karma user) new-karma-threshold*))))
 
-(= downvote-ratio-limit* .65 recent-votes* nil votewindow* 100)
+(defvar downvote-ratio-limit* .65)
+(defvar recent-votes* nil)
+(defvar votewindow* 100)
 
 ; Note: if vote-for by one user changes (s 'score) while s is being
 ; edited by another, the save after the edit will overwrite the change.
@@ -1443,7 +1465,7 @@ function vote(node) {
         (spacerow 20)
         (row "" submit-instructions*)))))
 
-(= submit-instructions*
+(defvar submit-instructions*
    "Leave url blank to submit a question for discussion. If there is 
     no url, the text (if any) will appear at the top of the comments 
     page. If there is a url, the text will be ignored.")
@@ -1457,14 +1479,12 @@ function vote(node) {
       (submit-page user u t)
       (submit-login-warning u t)))
 
-(= title-limit* 80
-   retry*       "Please try again."
-   toolong*     "Please make title < @title-limit* characters."
-   bothblank*   "The url and text fields can't both be blank.  Please
-                 either supply a url, or if you're asking a question,
-                 put it in the text field."
-   toofast*     "You're submitting too fast.  Please slow down.  Thanks."
-   spammage*    "Stop spamming us.  You're wasting your time.")
+(defvar title-limit* 80)
+(defvar retry*       "Please try again.")
+(defvar toolong*     "Please make title < @title-limit* characters.")
+(defvar bothblank*   "The url and text fields can't both be blank.  Please either supply a url, or if you're asking a question, put it in the text field.")
+(defvar toofast*     "You're submitting too fast.  Please slow down.  Thanks.")
+(defvar spammage*    "Stop spamming us.  You're wasting your time.")
 
 ; Only for annoyingly high-volume spammers. For ordinary spammers it's
 ; enough to ban their sites and ip addresses.
@@ -1511,7 +1531,7 @@ function vote(node) {
 
 ; Turn this on when spam becomes a problem.
 
-(= enforce-oversubmit* nil)
+(defvar enforce-oversubmit* nil)
 
 ; New user can't submit more than 2 stories in a 2 hour period.
 ; Give overeager users the key toofast to make limit permanent.
@@ -1555,13 +1575,13 @@ function vote(node) {
                    (+ t3 "." t2 "." t1)
                    (and t2 (+ t2 "." t1))))))))
 
-(= multi-tld-countries* '("uk" "jp" "au" "in" "ph" "tr" "za" "my" "nz" "br" 
-                          "mx" "th" "sg" "id" "pk" "eg" "il" "at" "pl"))
+(defvar multi-tld-countries* '("uk" "jp" "au" "in" "ph" "tr" "za" "my" "nz" "br" 
+                               "mx" "th" "sg" "id" "pk" "eg" "il" "at" "pl"))
 
-(= long-domains* '("blogspot" "wordpress" "livejournal" "blogs" "typepad" 
-                   "weebly" "posterous" "blog-city" "supersized" "dreamhosters"
-                   ; "sampasite"  "multiply" "wetpaint" ; all spam, just ban
-                   "eurekster" "blogsome" "edogo" "blog" "com"))
+(defvar long-domains* '("blogspot" "wordpress" "livejournal" "blogs" "typepad" 
+                        "weebly" "posterous" "blog-city" "supersized" "dreamhosters"
+                        ; "sampasite"  "multiply" "wetpaint" ; all spam, just ban
+                        "eurekster" "blogsome" "edogo" "blog" "com"))
 
 (def create-story (url title text user ip (o hnid) (o hnscore))
   (newslog ip user 'create url (list title))
@@ -1596,7 +1616,8 @@ function vote(node) {
 (diskvar  comment-kill*    (+ newsdir* "comment-kill"))
 (diskvar  comment-ignore*  (+ newsdir* "comment-ignore"))
 
-(= comment-kill* nil ip-ban-threshold* 3)
+(defvar comment-kill* nil)
+(defvar ip-ban-threshold* 3)
 
 (def set-ip-ban (user ip yesno (o info))
   (= (banned-ips* ip) (and yesno (list user (seconds) info)))
@@ -1662,7 +1683,7 @@ function vote(node) {
 ; option to sort the elements of a poll when displaying
 ; exclusive field? (means only allow one vote per poll)
 
-(= poll-threshold* 20)
+(defvar poll-threshold* 20)
 
 (newsop newpoll ()
   (if (and user (> (karma user) poll-threshold*))
@@ -1685,7 +1706,7 @@ function vote(node) {
         (row "choices" (textarea "o" 7 50 (only.pr opts)))
         (row ""        (submit))))))
 
-(= fewopts* "A poll must have at least two options.")
+(defvar fewopts* "A poll must have at least two options.")
 
 (def process-poll (user title text opts ip)
   (if (or (blank title) (blank opts))
@@ -1776,7 +1797,8 @@ function vote(node) {
         (do (note-baditem user ip)
             (pr "No such item.")))))
 
-(= baditemreqs* (table) baditem-threshold* 1/100)
+(defvar baditemreqs* (table))
+(defvar baditem-threshold* 1/100)
 
 ; Something looking at a lot of deleted items is probably the bad sort
 ; of crawler.  Throttle it for this server invocation.
@@ -1816,7 +1838,7 @@ function vote(node) {
 ; By default the ability to comment on an item is turned off after 
 ; 45 days, but this can be overriden with commentable key.
 
-(= commentable-threshold* (* 60 24 45))
+(defvar commentable-threshold* (* 60 24 45))
 
 (def comments-active (i)
   (and (live&commentable i)
@@ -1825,7 +1847,7 @@ function vote(node) {
            (mem 'commentable i!keys))))
 
 
-(= displayfn* (table))
+(defvar displayfn* (table))
 
 (= (displayfn* 'story)   (fn (n i user here inlist)
                            (display-story n i user here)))
@@ -1868,7 +1890,7 @@ function vote(node) {
 
 (def editable-type (i) (fieldfn* i!type))
 
-(= fieldfn* (table))
+(defvar fieldfn* (table))
 
 (= (fieldfn* 'story)
    (fn (user s)
@@ -1958,7 +1980,7 @@ function vote(node) {
       (spacerow 10)
       (row "" (comment-form parent user whence text)))))
 
-(= noob-comment-msg* nil)
+(defvar noob-comment-msg* nil)
 
 ; Comment forms last for 30 min (- cache time)
 
@@ -1975,7 +1997,7 @@ function vote(node) {
     (br2)
     (submit (if (acomment parent) "reply" "add comment"))))
 
-(= comment-threshold* -20)
+(defvar comment-threshold* -20)
 
 ; Have to remove #\returns because a form gives you back "a\r\nb"
 ; instead of just "a\nb".   Maybe should just remove returns from
@@ -2039,11 +2061,14 @@ function vote(node) {
 ; It might solve the same problem more generally to make html code
 ; more efficient.
 
-(= comment-cache* (table) comment-cache-timeout* (table) cc-window* 10000)
+(defvar comment-cache* (table))
+(defvar comment-cache-timeout* (table))
+(defvar cc-window* 10000)
 
-(= comments-printed* 0 cc-hits* 0)
+(defvar comments-printed* 0)
+(defvar cc-hits* 0)
 
-(= comment-caching* t) 
+(defvar comment-caching* t) 
 
 ; Cache comments generated for nil user that are over an hour old.
 ; Only try to cache most recent 10k items.  But this window moves,
@@ -2125,7 +2150,7 @@ function vote(node) {
 ; People could beat this by going to the link url or manually entering 
 ; the reply url, but deal with that if they do.
 
-(= reply-decay* 1.8)   ; delays: (0 0 1 3 7 12 18 25 33 42 52 63)
+(defvar reply-decay* 1.8)   ; delays: (0 0 1 3 7 12 18 25 33 42 52 63)
 
 (def replyable (c indent)
   (or (< indent 2)
@@ -2253,7 +2278,7 @@ function vote(node) {
 
 (newsop leaders () (leaderspage user))
 
-(= nleaders* 20)
+(defvar nleaders* 20)
 
 (newscache leaderspage user 1000
   (longpage user (msec) nil "leaders" "Leaders" "leaders"
@@ -2267,7 +2292,7 @@ function vote(node) {
                 (tdr:prt (only.num (uvar u avg) 2 t t))))
           (if (is i 10) (spacerow 30)))))))
 
-(= leader-threshold* 1)  ; redefined later
+(defvar leader-threshold* 1)  ; redefined later
 
 (def leading-users ()
   (sort (compare > [karma _])
@@ -2278,7 +2303,7 @@ function vote(node) {
          (row (userlink user u)))))
 
 
-(= update-avg-threshold* 0)  ; redefined later
+(defvar update-avg-threshold* 0)  ; redefined later
 
 (defbg update-avg 45
   (unless (or (empty profs*) (no stories*))
@@ -2317,7 +2342,7 @@ function vote(node) {
 (def actives (user (o n maxend*) (o consider 2000))
   (visible user (rank-stories n consider (memo active-rank))))
 
-(= active-threshold* 1500)
+(defvar active-threshold* 1500)
 
 (def active-rank (s)
   (sum [max 0 (- active-threshold* (item-age _))]
@@ -2338,9 +2363,9 @@ function vote(node) {
 (defop formatdoc req
   (msgpage (get-user req) formatdoc* "Formatting Options"))
 
-(= formatdoc-url* "formatdoc")
+(defvar formatdoc-url* "formatdoc")
 
-(= formatdoc* 
+(defvar formatdoc* 
 "Blank lines separate paragraphs.
 <p> Text after a blank line that is indented by two or more spaces is 
 reproduced verbatim.  (This is intended for code.)
@@ -2610,10 +2635,10 @@ first asterisk isn't whitespace.
       (each c (dedup (map downcase (trues [uvar _ topcolor] (users))))
         (tr (td c) (tdcolor (hex>color c) (hspace 30)))))))
 
-(= hn-items* (table))
-(= hn-topstories* (list))
-(= hn->id* (table))
-(= hn-itemcount* 100)
+(defvar hn-items* (table))
+(defvar hn-topstories* (list))
+(defvar hn->id* (table))
+(defvar hn-itemcount* 100)
 
 (def hn->id (hnid)
   (or (hn->id* hnid)

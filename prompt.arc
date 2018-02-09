@@ -1,6 +1,6 @@
 ; Prompt: Web-based programming application.  4 Aug 06.
 
-(= appdir* "arc/apps/")
+(defvar appdir* "arc/apps/")
 
 (defop prompt req 
   (let user (get-user req)

@@ -82,6 +82,14 @@
                 `(do (sref sig ',parms ',name)
                      (safeset ,name (annotate 'mac (fn ,parms ,@body)))))))
 
+(mac defvar (name (o value 'nil) (o docstring))
+  `(do (if (no (bound ',name))
+           (assign ,name ,value))
+       ',name))
+
+(mac defconst (name (o value 'nil) (o docstring))
+  `(do (assign ,name ,value) ',name))
+
 (mac and args
   (if args
       (if (cdr args)
@@ -1312,7 +1320,7 @@
   (+ xs (rem (fn (y) (some [f _ y] xs))
              ys)))
 
-(= templates* (table))
+(defvar templates* (table))
 
 (mac deftem (tem . fields)
   (withs (name (carif tem) includes (if (acons tem) (cdr tem)))
@@ -1659,7 +1667,7 @@
     (each k ks (set (h k)))
     h))
 
-(= bar* " | ")
+(defvar bar* " | ")
 
 (mac w/bars body
   (w/uniq (out needbars)
@@ -1692,7 +1700,7 @@
     `(atwiths ,binds
        (or ,val (,setter ,expr)))))
 
-(= hooks* (table))
+(defvar hooks* (table))
 
 (def hook (name . args)
   (aif (hooks* name) (apply it args)))
@@ -1706,7 +1714,7 @@
 
 (def get (index) [_ index])
 
-(= savers* (table))
+(defvar savers* (table))
 
 (mac fromdisk (var file init load save)
   (w/uniq (gf gv)

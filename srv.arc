@@ -2,9 +2,12 @@
 
 ; To improve performance with static files, set static-max-age*.
 
-(= arcdir* "arc/" logdir* "arc/logs/" staticdir* "static/")
+(defvar arcdir* "arc/")
+(defvar logdir* "arc/logs/")
+(defvar staticdir* "static/")
 
-(= quitsrv* nil breaksrv* nil) 
+(defvar quitsrv* nil)
+(defvar breaksrv* nil) 
 
 (def serve ((o port 8080))
   (wipe quitsrv*)
@@ -24,7 +27,7 @@
 (def ensure-srvdirs ()
   (map ensure-dir (list arcdir* logdir* staticdir*)))
 
-(= srv-noisy* (getenv "ARC_DEBUG"))
+(defvar srv-noisy* (getenv "ARC_DEBUG"))
 
 ; http requests currently capped at 2 meg by socket-accept
 
@@ -36,8 +39,12 @@
 ; to handle it. also arrange to kill that thread if it
 ; has not completed in threadlife* seconds.
 
-(= threadlife* 30  requests* 0  requests/ip* (table)  
-   throttle-ips* (table)  ignore-ips* (table)  spurned* (table))
+(defvar threadlife* 30)
+(defvar requests* 0)
+(defvar requests/ip* (table))
+(defvar throttle-ips* (table))
+(defvar ignore-ips* (table))
+(defvar spurned* (table))
 
 (def handle-request (s breaksrv)
   (if breaksrv
@@ -72,7 +79,10 @@
 ; To adjust this while running, adjust the req-window* time, not 
 ; req-limit*, because algorithm doesn't enforce decreases in the latter.
 
-(= req-times* (table) req-limit* 30 req-window* 10 dos-window* 2)
+(defvar req-times* (table))
+(defvar req-limit* 30)
+(defvar req-window* 10)
+(defvar dos-window* 2)
 
 (def abusive-ip (ip)
   (and (only.> (requests/ip* ip) 250)
@@ -137,11 +147,11 @@
         (if srv-noisy* (pr "\n\n"))
         (respond o op (+ (parseargs (string (rev line))) args) cooks ip))))
 
-(= header* "HTTP/1.1 200 OK
+(defvar header* "HTTP/1.1 200 OK
 Content-Type: text/html; charset=utf-8
 Connection: close")
 
-(= type-header* (table))
+(defvar type-header* (table))
 
 (def gen-type-header (ctype)
   (+ "HTTP/1.0 200 OK
@@ -157,9 +167,12 @@ Connection: close"))
        (text/css  "text/css; charset=utf-8")
        (text/html "text/html; charset=utf-8")))
 
-(= rdheader* "HTTP/1.0 302 Moved")
+(defvar rdheader* "HTTP/1.0 302 Moved")
 
-(= srvops* (table) redirector* (table) optimes* (table) opcounts* (table))
+(defvar srvops* (table))
+(defvar redirector* (table))
+(defvar optimes* (table))
+(defvar opcounts* (table))
 
 (def save-optime (name elapsed)
   ; this is the place to put a/b testing
@@ -204,7 +217,9 @@ Connection: close"))
   cooks nil
   ip    nil)
 
-(= unknown-msg* "Unknown." max-age* (table) static-max-age* nil)
+(defvar unknown-msg* "Unknown.")
+(defvar max-age* (table))
+(defvar static-max-age* nil)
 
 (def respond (str op args cooks ip)
   (w/stdout str
@@ -300,7 +315,9 @@ Connection: close"))
                                            it)))
        ""))
 
-(= fns* (table) fnids* nil timed-fnids* nil)
+(defvar fns* (table))
+(defvar fnids* nil)
+(defvar timed-fnids* nil)
 
 ; count on huge (expt 64 10) size of fnid space to avoid clashes
 
@@ -352,9 +369,12 @@ Connection: close"))
         (each id kill 
           (wipe (fns* id)))))))
 
-(= fnurl* "/x" rfnurl* "/r" rfnurl2* "/y" jfnurl* "/a")
+(defvar fnurl* "/x")
+(defvar rfnurl* "/r")
+(defvar rfnurl2* "/y")
+(defvar jfnurl* "/a")
 
-(= dead-msg* "\nUnknown or expired link.")
+(defvar dead-msg* "\nUnknown or expired link.")
  
 (defop-raw x (str req)
   (w/stdout str 
@@ -489,7 +509,7 @@ Connection: close"))
 
 ; only unique per server invocation
 
-(= unique-ids* (table))
+(defvar unique-ids* (table))
 
 (def unique-id ((o len 8))
   (let id (sym (rand-string (max 5 len)))
@@ -553,7 +573,8 @@ Connection: close"))
 
 ; Background Threads
 
-(= bgthreads* (table) pending-bgthreads* nil)
+(defvar bgthreads* (table))
+(defvar pending-bgthreads* nil)
 
 (def new-bgthread (id f sec)
   (aif (bgthreads* id) (break-thread it))

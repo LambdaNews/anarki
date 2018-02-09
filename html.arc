@@ -19,15 +19,14 @@
 
 (defmemo gray (n) (color n n n))
 
-(= white    (gray 255) 
-   black    (gray 0)
-   linkblue (color 0 0 190)
-   orange   (color 255 102 0)
-   darkred  (color 180 0 0)
-   darkblue (color 0 0 120)
-   )
+(defvar white    (gray 255))
+(defvar black    (gray 0))
+(defvar linkblue (color 0 0 190))
+(defvar orange   (color 255 102 0))
+(defvar darkred  (color 180 0 0))
+(defvar darkblue (color 0 0 120))
 
-(= opmeths* (table))
+(defvar opmeths* (table))
 
 (mac opmeth args
   `(opmeths* (list ,@args)))
@@ -35,7 +34,7 @@
 (mac attribute (tag opt f)
   `(= (opmeths* (list ',tag ',opt)) ,f))
 
-(= hexreps (table))
+(defvar hexreps (table))
 
 (for i 0 255 (= (hexreps i)
                 (let s (coerce i 'string 16)

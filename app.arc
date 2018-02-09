@@ -6,10 +6,10 @@
 
 ; A user is simply a string: "pg". Use /whoami to test user cookie.
 
-(= hpwfile*   "arc/hpw"
-   oidfile*   "arc/openids"
-   adminfile* "arc/admins"
-   cookfile*  "arc/cooks")
+(defvar hpwfile*   "arc/hpw")
+(defvar oidfile*   "arc/openids")
+(defvar adminfile* "arc/admins")
+(defvar cookfile*  "arc/cooks")
 
 (def asv ((o port 8080))
   (load-userinfo)
@@ -30,7 +30,9 @@
 
 ; idea: a bidirectional table, so don't need two vars (and sets)
 
-(= cookie->user* (table) user->cookie* (table) logins* (table))
+(defvar cookie->user* (table))
+(defvar user->cookie* (table))
+(defvar logins* (table))
 
 (def get-user (req) 
   (let u (aand (alref req!cooks "user") (cookie->user* (sym it)))
@@ -208,7 +210,8 @@
   (br)
   (submit label))
 
-(= good-logins* (queue) bad-logins* (queue))
+(defvar good-logins* (queue))
+(defvar bad-logins* (queue))
 
 (def good-login (user pw ip)
   (let record (list (seconds) ip user)
@@ -242,7 +245,7 @@
       (do1 (if (isa hash 'string) (is res "1") res)
            (rmfile fname))))))
 
-(= dc-usernames* (table))
+(defvar dc-usernames* (table))
 
 (def username-taken (user)
   (when (empty dc-usernames*)
@@ -250,7 +253,7 @@
       (set (dc-usernames* (downcase k)))))
   (dc-usernames* (downcase user)))
 
-(= username-enabled* [do t])
+(defvar username-enabled* [do t])
 
 (def bad-newacct (user pw)
   (if (no (goodname user 2 15))
@@ -289,7 +292,10 @@
            (pr "."))))
 
 
-(= formwid* 60 bigformwid* 80 numwid* 16 formatdoc-url* nil)
+(defvar formwid* 60)
+(defvar bigformwid* 80)
+(defvar numwid* 16)
+(defvar formatdoc-url* nil)
 
 ; Eventually figure out a way to separate type name from format of 
 ; input field, instead of having e.g. toks and bigtoks
@@ -616,24 +622,24 @@
           m))))
 
 
-(= months* '("January" "February" "March" "April" "May" "June" "July"
-             "August" "September" "October" "November" "December"))
+(defvar months* '("January" "February" "March" "April" "May" "June" "July"
+                  "August" "September" "October" "November" "December"))
 
 (def english-date ((y m d))
   (string d " " (months* (- m 1)) " " y))
 
-(= month-names* (obj "january"    1  "jan"        1
-                     "february"   2  "feb"        2
-                     "march"      3  "mar"        3
-                     "april"      4  "apr"        4
-                     "may"        5
-                     "june"       6  "jun"        6
-                     "july"       7  "jul"        7
-                     "august"     8  "aug"        8
-                     "september"  9  "sept"       9  "sep"      9
-                     "october"   10  "oct"       10
-                     "november"  11  "nov"       11
-                     "december"  12  "dec"       12))
+(defvar month-names* (obj "january"    1  "jan"        1
+                          "february"   2  "feb"        2
+                          "march"      3  "mar"        3
+                          "april"      4  "apr"        4
+                          "may"        5
+                          "june"       6  "jun"        6
+                          "july"       7  "jul"        7
+                          "august"     8  "aug"        8
+                          "september"  9  "sept"       9  "sep"      9
+                          "october"   10  "oct"       10
+                          "november"  11  "nov"       11
+                          "december"  12  "dec"       12))
 
 (def monthnum (s) (month-names* (downcase s)))
 
