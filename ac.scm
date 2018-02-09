@@ -791,7 +791,9 @@
 (xdef rep ar-rep)
 
 (define (ar-gensym x)
-  (if (or (symbol? x) (string? x))
+  (if (or (and (symbol? x)
+               (not (ssyntax? x)))
+          (string? x))
       (gensym x)
       (gensym 'cons)))
 
