@@ -407,7 +407,7 @@
          (or (empty y) (and (~empty x) (< x y))))))
 
 
-; (= fail* (uniq))
+; (= fail* (uniq 'fail*))
 
 (def fail* ()) ; coudn't possibly come back from a form
   

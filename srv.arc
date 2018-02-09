@@ -394,11 +394,11 @@ Connection: close"))
 ; Since it's just an expr, gensym a parm for (ignored) args.
 
 (mac w/link (expr . body)
-  `(tag (a href (flink (fn (,(uniq)) ,expr)))
+  `(tag (a href (flink (fn (,(uniq 'w/link)) ,expr)))
      ,@body))
 
 (mac w/rlink (expr . body)
-  `(tag (a href (rflink (fn (,(uniq)) ,expr)))
+  `(tag (a href (rflink (fn (,(uniq 'w/rlink)) ,expr)))
      ,@body))
 
 (mac onlink (text . body)
@@ -420,7 +420,7 @@ Connection: close"))
 ;(defop testf req (w/link (pr "ha ha ha") (pr "laugh")))
 
 (mac w/link-if (test expr . body)
-  `(tag-if ,test (a href (flink (fn (,(uniq)) ,expr)))
+  `(tag-if ,test (a href (flink (fn (,(uniq 'w/link-if)) ,expr)))
      ,@body))
 
 (def fnid-field (id)

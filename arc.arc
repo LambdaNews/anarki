@@ -138,7 +138,7 @@
 ; Composes in functional position are transformed away by ac.
 
 (mac compose args
-  (let g (uniq)
+  (let g (uniq 'g)
     `(fn ,g
        ,((afn (fs)
            (if (cdr fs)
@@ -149,7 +149,7 @@
 ; Ditto: complement in functional position optimized by ac.
 
 (mac complement (f)
-  (let g (uniq)
+  (let g (uniq 'g)
     `(fn ,g (no (apply ,f ,g)))))
 
 (def rev (xs) 
@@ -163,10 +163,10 @@
 
 (mac w/uniq (names . body)
   (if (acons names)
-      `(with ,(apply + nil (map1 (fn (n) (list n '(uniq)))
+      `(with ,(apply + nil (map1 (fn (n) (list n `(uniq ',n)))
                              names))
          ,@body)
-      `(let ,names (uniq) ,@body)))
+      `(let ,names (uniq ',names) ,@body)))
 
 (mac or args
   (and args
@@ -403,7 +403,7 @@
                      (warn "Inverting what looks like a function call"
                            expr0 expr))
                    (w/uniq (g h)
-                     (let argsyms (map [uniq] (cdr expr))
+                     (let argsyms (map [uniq _] (cdr expr))
                         (list (+ (list g (car expr))
                                  (mappend list argsyms (cdr expr)))
                               `(,g ,@argsyms)
@@ -462,7 +462,7 @@
          ,@body))))
 
 (mac repeat (n . body)
-  `(for ,(uniq) 1 ,n ,@body))
+  `(for ,(uniq 'repeat-i) 1 ,n ,@body))
 
 ; could bind index instead of gensym
 
@@ -554,7 +554,7 @@
     `(let ,var ,expr ,(ex args))))
 
 (mac case (expr . args)
-  `(caselet ,(uniq) ,expr ,@args))
+  `(caselet ,(uniq 'caselet-i) ,expr ,@args))
 
 (mac push (x place)
   (w/uniq gx
@@ -572,7 +572,7 @@
          (,setter2 ,g1)))))
 
 (mac rotate places
-  (with (vars (map [uniq] places)
+  (with (vars (map [uniq _] places)
          forms (map setforms places))
     `(atwiths ,(mappend (fn (g (binds val setter))
                           (+ binds (list g val)))
@@ -634,8 +634,8 @@
 ; E.g. (++ x) equiv to (zap + x 1)
 
 (mac zap (op place . args)
-  (with (gop    (uniq)
-         gargs  (map [uniq] args)
+  (with (gop    (uniq 'gop)
+         gargs  (map [uniq _] args)
          mix    (afn seqs 
                   (if (some no seqs)
                       nil
@@ -1518,7 +1518,7 @@
       (f (car xs) (rreduce f (cdr xs)))
       (apply f xs)))
 
-(let argsym (uniq)
+(let argsym (uniq 'argsym)
 
   (def parse-format (str)
     (accum a

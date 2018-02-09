@@ -308,7 +308,7 @@
 ; be missing.
 
 (define (ac-complex-fn args body env)
-  (let* ((ra (ar-gensym))
+  (let* ((ra (ar-gensym 'ac-complex-fn-arg))
          (z (ac-complex-args args env ra #t)))
     `(lambda ,ra
        (let* ,z
@@ -522,7 +522,7 @@
         (#t (list (car fns) (decompose (cdr fns) args)))))
 
 (define (ac-andf s env)
-  (ac (let ((gs (map (lambda (x) (ar-gensym)) (cdr s))))
+  (ac (let ((gs (map (lambda (x) (ar-gensym 'ac-andf-arg)) (cdr s))))
                `((fn ,gs
                    (and ,@(map (lambda (f) `(,f ,@gs))
                                (cdar s))))
@@ -790,13 +790,10 @@
 
 (xdef rep ar-rep)
 
-; currently rather a joke: returns interned symbols
-
-(define ar-gensym-count 0)
-
-(define (ar-gensym)
-  (set! ar-gensym-count (+ ar-gensym-count 1))
-  (string->symbol (string-append "gs" (number->string ar-gensym-count))))
+(define (ar-gensym x)
+  (if (or (symbol? x) (string? x))
+      (gensym x)
+      (gensym 'cons)))
 
 (xdef uniq ar-gensym)
 
