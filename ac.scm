@@ -10,6 +10,7 @@
 (require racket/unsafe/ops)
 (require json)
 (require (only racket/base syntax->datum memf memq member))
+(require mzlib/etc)
 (unsafe!)
 
 ; compile an Arc expression into a Scheme expression,
@@ -1103,8 +1104,7 @@
     (read-eval-print-loop)))
 
 (define ac-load-path
-  (list (getenv "ARC_HOME")
-        (path->string (find-system-path 'orig-dir))))
+  (list (this-expression-source-directory) (path->string (find-system-path 'orig-dir))))
 
 (xdef load-path ac-load-path)
 

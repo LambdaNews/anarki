@@ -18,4 +18,4 @@ then
   set -- -e '(tl)'
 fi
 
-ARC_HOME="${home}/" exec racket -f "${home}/as.scm" "$@"
+exec racket -f "${home}/as.scm" "$@"
