@@ -15,12 +15,12 @@
 
 (def load-posts ()
   (each id (map int (dir postdir*))
-    (= maxid*      (max maxid* id)
-       (posts* id) (temload 'post (string postdir* id)))))
+    (= maxid*          (max maxid* id)
+       (ref posts* id) (temload 'post (string postdir* id)))))
 
 (def save-post (p) (save-table p (string postdir* p!id)))
 
-(def post (id) (posts* (errsafe:int id)))
+(def post (id) (ref posts* (errsafe:int id)))
 
 (mac blogpage body
   `(whitepage 
@@ -63,7 +63,7 @@
 (def addpost (user title text)
   (let p (inst 'post 'id (++ maxid*) 'title title 'text text)
     (save-post p)
-    (= (posts* p!id) p)))
+    (= (ref posts* p!id) p)))
 
 (defopl editpost req (blogop edit-page req))
 
@@ -85,7 +85,7 @@
   (let user (get-user req)
     (blogpage
       (for i 0 4
-        (awhen (posts* (- maxid* i)) 
+        (awhen (ref posts* (- maxid* i)) 
           (display-post user it)
           (br 3))))))
 

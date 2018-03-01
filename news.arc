@@ -94,11 +94,11 @@
   ;(noisy-each 100 id (dir profdir*)
   ;  (load-user id)))
   (each (k u) (temloadall 'profile profdir*)
-    (= (profs* u!id) u))
+    (= (ref profs* u!id) u))
   (pr "load votes: ")
   (each (k v) (load-tables votedir*)
     (let u (string k)
-      (= (votes* u) v))))
+      (= (ref votes* u) v))))
 
 ; For some reason vote files occasionally get written out in a 
 ; broken way.  The nature of the errors (random missing or extra
@@ -107,28 +107,28 @@
 ; vulnerable to it, since that's all save-table does.
 
 (def load-user (u)
-  (= (votes* u) (load-table (+ votedir* u))
-     (profs* u) (temload 'profile (+ profdir* u)))
+  (= (ref votes* u) (load-table (+ votedir* u))
+     (ref profs* u) (temload 'profile (+ profdir* u)))
   u)
 
 ; Have to check goodname because some user ids come from http requests.
 ; So this is like safe-item.  Don't need a sep fn there though.
 
 (def profile (u)
-  (or (profs* u)
+  (or (ref profs* u)
       (aand (goodname u)
             (exists-firebase (+ profdir* u))
-            (= (profs* u) (temload 'profile it)))))
+            (= (ref profs* u) (temload 'profile it)))))
 
 (def votes (u)
-  (or (votes* u)
+  (or (ref votes* u)
       (aand (exists-firebase (+ votedir* u))
-            (= (votes* u) (load-table it)))
-      (= (votes* u) (table))))
+            (= (ref votes* u) (load-table it)))
+      (= (ref votes* u) (table))))
           
 (def init-user (u)
-  (= (votes* u) (table) 
-     (profs* u) (inst 'profile 'id u))
+  (= (ref votes* u) (table) 
+     (ref profs* u) (inst 'profile 'id u))
   (save-votes u)
   (save-prof u)
   u)
@@ -141,11 +141,11 @@
 (def ensure-news-user (u)
   (if (profile u) u (init-user u)))
 
-(def save-votes (u) (save-table (votes* u) (+ votedir* u)))
+(def save-votes (u) (save-table (ref votes* u) (+ votedir* u)))
 
-(def save-prof  (u) (save-table (profs* u) (+ profdir* u)))
+(def save-prof  (u) (save-table (ref profs* u) (+ profdir* u)))
 
-(mac uvar (u k) `((profile ,u) ',k))
+(mac uvar (u k) `(ref (profile ,u) ',k))
 
 (mac karma   (u) `(uvar ,u karma))
 (mac ignored (u) `(uvar ,u ignore))
@@ -188,7 +188,7 @@
     ;    (push i (items i!type))))
     (noisy-each 100 (id i) (temloadall 'item storydir*)
       (let i (load-item id i)
-        (push i (items i!type))))
+        (push i (ref items i!type))))
     (= stories*  (rev (merge (compare < !id) items!story items!poll))
        comments* (rev items!comment))
     (hook 'initload items))
@@ -207,9 +207,9 @@
 
 (def load-item (id (o i))
   (let i (or i (temload 'item (+ storydir* id)))
-    (= (items* id) i)
+    (= (ref items* id) i)
     (whenlet hnid i!hnid
-      (= (hn->id* hnid) i!id))
+      (= (ref hn->id* hnid) i!id))
     (awhen (and (astory&live i) (check i!url ~blank))
       (register-url i it))
     i))
@@ -218,14 +218,14 @@
 ; point been loaded. 
 
 (def register-url (i url)
-  (= (url->story* (canonical-url url)) i!id))
+  (= (ref url->story* (canonical-url url)) i!id))
 
 ; redefined later
 
 (defvar stemmable-sites* (table))
 
 (def canonical-url (url)
-  (if (stemmable-sites* (sitename url))
+  (if (ref stemmable-sites* (sitename url))
       (cut url 0 (pos #\? url))
       url))
 
@@ -233,7 +233,7 @@
   (evtil (++ maxid*) [~exists-firebase (+ storydir* _)]))
 
 (def item (id)
-  (or (items* id)
+  (or (ref items* id)
       (if (< id 0)
           (errsafe:hn-item (- id))
           (errsafe:load-item id))))
@@ -259,7 +259,7 @@
 (def kill (i how)
   (unless i!dead
     (log-kill i how)
-    (wipe (comment-cache* i!id))
+    (wipe (ref comment-cache* i!id))
     (set i!dead)
     (save-item i)))
 
@@ -272,7 +272,7 @@
   (w/uniq g
     `(let ,g nil
        (loop (= ,g maxid*) (> ,g 0) (-- ,g)
-         (whenlet ,var (items* ,g)
+         (whenlet ,var (ref items* ,g)
            ,@body)))))
 
 (def loaded-items (test)
@@ -320,7 +320,7 @@
   (or s!dead
       (mem 'rally s!keys)  ; title is a rallying cry
       (mem 'image s!keys)  ; post is mainly image(s)
-      (lightweights* (sitename s!url))
+      (ref lightweights* (sitename s!url))
       (lightweight-url s!url)))
 
 (defmemo lightweight-url (url)
@@ -376,7 +376,7 @@
 
 (def rerank-random ()
   (when ranked-stories*
-    (adjust-rank (ranked-stories* (rand (min 50 (len ranked-stories*)))))))
+    (adjust-rank (ref ranked-stories* (rand (min 50 (len ranked-stories*)))))))
 
 (def topstories (user n (o threshold front-threshold*))
   (retrieve n 
@@ -393,10 +393,10 @@
 
 (let mature (table)
   (def delayed (i)
-    (and (no (mature i!id))
+    (and (no (ref mature i!id))
          (acomment i)
          (or (< (item-age i) (min max-delay* (uvar i!by delay)))
-             (do (set (mature i!id))
+             (do (set (ref mature i!id))
                  nil)))))
 
 (def seesdead (user)
@@ -569,7 +569,7 @@ function vote(node) {
                    (spanclass pagetop (topright user whence)))
                  (tag (td style "line-height:12pt; height:10px;")
                    (spanclass pagetop (prbold label))))))))
-  (map [_ user] pagefns*)
+  (map [ref _ user] pagefns*)
   (spacerow 10))
 
 (def gen-logo ()
@@ -645,7 +645,7 @@ function vote(node) {
 (mac opexpand (definer name parms . body)
   (w/uniq gr
     `(,definer ,name ,gr
-       (with (user (get-user ,gr) ip (,gr 'ip))
+       (with (user (get-user ,gr) ip (ref ,gr 'ip))
          (with ,(and parms (mappend [list _ (list 'arg gr (string _))]
                                     parms))
            (newslog ip user ',name ,@parms)
@@ -758,28 +758,28 @@ function vote(node) {
           u (or a w)
           m (or a (and (member user) w))
           p (profile subject))
-    `((string  user       ,subject                                 ,t  ,nil)
-      (string  name       ,(p 'name)                               ,m  ,m)
-      (string  created    ,(text-age:user-age subject)             ,t  ,nil)
-      (string  password   ,(resetpw-link)                          ,w  ,nil)
-      (string  saved      ,(saved-link user subject)               ,u  ,nil)
-      (int     auth       ,(p 'auth)                               ,e  ,a)
-      (yesno   member     ,(p 'member)                             ,a  ,a)
-      (posint  karma      ,(p 'karma)                              ,t  ,a)
-      (num     avg        ,(p 'avg)                                ,a  ,nil)
-      (yesno   ignore     ,(p 'ignore)                             ,e  ,e)
-      (num     weight     ,(p 'weight)                             ,a  ,a)
-      (mdtext2 about      ,(p 'about)                              ,t  ,u)
-      (string  email      ,(p 'email)                              ,u  ,u)
-      (yesno   showdead   ,(p 'showdead)                           ,u  ,u)
-      (yesno   noprocrast ,(p 'noprocrast)                         ,u  ,u)
-      (string  firstview  ,(p 'firstview)                          ,a  ,nil)
-      (string  lastview   ,(p 'lastview)                           ,a  ,nil)
-      (posint  maxvisit   ,(p 'maxvisit)                           ,u  ,u)
-      (posint  minaway    ,(p 'minaway)                            ,u  ,u)
-      (sexpr   keys       ,(p 'keys)                               ,a  ,a)
-      (hexcol  topcolor   ,(or (p 'topcolor) (hexrep site-color*)) ,k  ,k)
-      (int     delay      ,(p 'delay)                              ,u  ,u))))
+    `((string  user       ,subject                                     ,t  ,nil)
+      (string  name       ,(ref p 'name)                               ,m  ,m)
+      (string  created    ,(text-age:user-age subject)                 ,t  ,nil)
+      (string  password   ,(resetpw-link)                              ,w  ,nil)
+      (string  saved      ,(saved-link user subject)                   ,u  ,nil)
+      (int     auth       ,(ref p 'auth)                               ,e  ,a)
+      (yesno   member     ,(ref p 'member)                             ,a  ,a)
+      (posint  karma      ,(ref p 'karma)                              ,t  ,a)
+      (num     avg        ,(ref p 'avg)                                ,a  ,nil)
+      (yesno   ignore     ,(ref p 'ignore)                             ,e  ,e)
+      (num     weight     ,(ref p 'weight)                             ,a  ,a)
+      (mdtext2 about      ,(ref p 'about)                              ,t  ,u)
+      (string  email      ,(ref p 'email)                              ,u  ,u)
+      (yesno   showdead   ,(ref p 'showdead)                           ,u  ,u)
+      (yesno   noprocrast ,(ref p 'noprocrast)                         ,u  ,u)
+      (string  firstview  ,(ref p 'firstview)                          ,a  ,nil)
+      (string  lastview   ,(ref p 'lastview)                           ,a  ,nil)
+      (posint  maxvisit   ,(ref p 'maxvisit)                           ,u  ,u)
+      (posint  minaway    ,(ref p 'minaway)                            ,u  ,u)
+      (sexpr   keys       ,(ref p 'keys)                               ,a  ,a)
+      (hexcol  topcolor   ,(or (ref p 'topcolor) (hexrep site-color*)) ,k  ,k)
+      (int     delay      ,(ref p 'delay)                              ,u  ,u))))
 
 (def saved-link (user subject)
   (when (or (admin user) (is user subject))
@@ -950,7 +950,7 @@ function vote(node) {
     (pr "More")))
 
 (def display-story (i s user whence)
-  (when (or (cansee user s) (s 'kids))
+  (when (or (cansee user s) (ref s 'kids))
     (tr (display-item-number i)
         (td (votelinks s user whence))
         (titleline s s!url user whence))
@@ -986,12 +986,12 @@ function vote(node) {
                 (if (admin user)
                     (w/rlink (do (set-site-ban user
                                                it
-                                               (case (car (banned-sites* it))
+                                               (case (car (ref banned-sites* it))
                                                  nil    'ignore
                                                  ignore 'kill
                                                  kill   nil))
                                  whence)
-                      (let ban (car (banned-sites* it))
+                      (let ban (car (ref banned-sites* it))
                         (tag-if ban (font color (case ban 
                                                   ignore darkred 
                                                   kill   darkblue))
@@ -1039,7 +1039,7 @@ function vote(node) {
   (center
     (if (and (cansee user i)
              (or (no user)
-                 (no ((votes user) i!id))))
+                 (no (ref (votes user) i!id))))
          (do (votelink i user whence 'up)
              (if (and downtoo 
                       (or (admin user)
@@ -1072,7 +1072,7 @@ function vote(node) {
 (def vote-url (user i dir whence)
   (+ "vote?" "for=" i!id
              "&dir=" dir
-             (if user (+ "&by=" user "&auth=" (user->cookie* user)))
+             (if user (+ "&by=" user "&auth=" (ref user->cookie* user)))
              "&whence=" (urlencode whence)))
 
 (defvar lowest-score* -4)
@@ -1084,7 +1084,7 @@ function vote(node) {
   (and user
        (news-type&live i)
        (or (is dir 'up) (> i!score lowest-score*))
-       (no ((votes user) i!id))
+       (no (ref (votes user) i!id))
        (or (is dir 'up)
            (and (acomment i)
                 (> (karma user) downvote-threshold*)
@@ -1102,7 +1102,7 @@ function vote(node) {
          (pr "No such item.")
         (no (in dir 'up 'down))
          (pr "Can't make that vote.")
-        (and by (or (isnt by user) (isnt (sym auth) (user->cookie* user))))
+        (and by (or (isnt by user) (isnt (sym auth) (ref user->cookie* user))))
          (pr "User mismatch.")
         (no user)
          (login-page 'both "You have to be logged in to vote."
@@ -1158,7 +1158,7 @@ function vote(node) {
     (when (cansee user i) 
       (pr bar*)
       (tag (a href (hn-item-url i!hnid))
-        (let n (or ((hn-story i!hnid) 'descendants) 0)
+        (let n (or (ref (hn-story i!hnid) 'descendants) 0)
           (if (> n 0)
               (pr (plural n "HN comment"))
               (pr "discuss on HN")))))))
@@ -1192,7 +1192,7 @@ function vote(node) {
 
 (def canedit (user i)
   (or (admin user)
-      (and (~noedit* i!type)
+      (and (~ref noedit* i!type)
            (editor user) 
            (< (item-age i) editor-changetime*))
       (own-changeable-item user i)))
@@ -1201,7 +1201,7 @@ function vote(node) {
   (and (author user i)
        (~mem 'locked i!keys)
        (no i!deleted)
-       (or (everchange* i!type)
+       (or (ref everchange* i!type)
            (< (item-age i) user-changetime*))))
 
 (def editlink (i user)
@@ -1321,7 +1321,7 @@ function vote(node) {
     (link "link" (item-url story!id))))
 
 (def logvote (ip user story)
-  (newslog ip user 'vote (story 'id) (list (story 'title))))
+  (newslog ip user 'vote (ref story 'id) (list (ref story 'title))))
 
 (def text-age (a)
   (tostring
@@ -1355,15 +1355,15 @@ function vote(node) {
 (defvar recent-votes* nil)
 (defvar votewindow* 100)
 
-; Note: if vote-for by one user changes (s 'score) while s is being
+; Note: if vote-for by one user changes (ref s 'score) while s is being
 ; edited by another, the save after the edit will overwrite the change.
 ; Actual votes can't be lost because that field is not editable.  Not a
 ; big enough problem to drag in locking.
 
 (def vote-for (user i (o dir 'up))
-  (unless (or ((votes user) i!id) 
+  (unless (or (ref (votes user) i!id) 
               (and (~live i) (isnt user i!by)))
-    (withs (ip   (logins* user)
+    (withs (ip   (ref logins* user)
             vote (list (seconds) ip user dir i!score))
       (unless (or (and (or (ignored user) (check-key user 'novote))
                        (isnt user i!by))
@@ -1388,13 +1388,13 @@ function vote(node) {
                     (is i!type 'pollopt))
           (++ (karma i!by) (case dir up 1 down -1))
           (save-prof i!by))
-        (wipe (comment-cache* i!id)))
+        (wipe (ref comment-cache* i!id)))
       (if (admin user) (pushnew 'nokill i!keys))
       (push vote i!votes)
       (save-item i)
       (push (list (seconds) i!id i!by (sitename i!url) dir)
             (uvar user votes))
-      (= ((votes* user) i!id) vote)
+      (= (ref (ref votes* user) i!id) vote)
       (save-votes user)
       (zap [firstn votewindow* _] (uvar user votes))
       (save-prof user)
@@ -1408,7 +1408,7 @@ function vote(node) {
 
 (def downvote-ratio (user (o sample 20))
   (ratio [is _.1.3 'down]
-         (keep [let by ((item (car _)) 'by)
+         (keep [let by (ref (item (car _)) 'by)
                  (nor (is by user) (ignored by))]
                (bestn sample (compare > car:cadr) (tablist (votes user))))))
 
@@ -1505,7 +1505,7 @@ function vote(node) {
            (and (blank url) (blank text))
             (flink [submit-page user url title showtext text bothblank*])
            (let site (sitename url)
-             (or (big-spamsites* site) (recent-spam site)))
+             (or (ref big-spamsites* site) (recent-spam site)))
             (flink [msgpage user spammage*])
            (oversubmitting user ip 'story url)
             (flink [msgpage user toofast*])
@@ -1522,7 +1522,7 @@ function vote(node) {
   (vote-for user i))
 
 (def recent-spam (site)
-  (and (caris (banned-sites* site) 'ignore)
+  (and (caris (ref banned-sites* site) 'ignore)
        (recent-items [is (sitename _!url) site] 720)))
 
 (def recent-items (test minutes)
@@ -1554,11 +1554,11 @@ function vote(node) {
 
 (def process-title (s)
   (let s2 (multisubst scrubrules* s)
-    (zap upcase (s2 0))
+    (zap upcase (ref s2 0))
     s2))
 
 (def live-story-w/url (url) 
-  (aand (url->story* (canonical-url url)) (check (item it) live)))
+  (aand (ref url->story* (canonical-url url)) (check (item it) live)))
 
 (def parse-site (url)
   (rev (tokens (cadr (tokens url [in _ #\/ #\?])) #\.)))
@@ -1587,7 +1587,7 @@ function vote(node) {
   (newslog ip user 'create url (list title))
   (let s (inst 'item 'type 'story 'id (new-item-id) 
                      'url url 'title title 'text text 'by user 'ip ip 'hnid hnid 'hnscore hnscore)
-    (= (items* s!id) s)
+    (= (ref items* s!id) s)
     (unless (blank url) (register-url s url))
     (push s stories*)
     (save-item s)
@@ -1620,11 +1620,11 @@ function vote(node) {
 (defvar ip-ban-threshold* 3)
 
 (def set-ip-ban (user ip yesno (o info))
-  (= (banned-ips* ip) (and yesno (list user (seconds) info)))
+  (= (ref banned-ips* ip) (and yesno (list user (seconds) info)))
   (todisk banned-ips*))
 
 (def set-site-ban (user site ban (o info))
-  (= (banned-sites* site) (and ban (list ban user (seconds) info)))
+  (= (ref banned-sites* site) (and ban (list ban user (seconds) info)))
   (todisk banned-sites*))
 
 ; Kill submissions from banned ips, but don't auto-ignore users from
@@ -1639,17 +1639,17 @@ function vote(node) {
   (hook 'story-ban-test user i ip url))
 
 (def site-ban-test (user i url)
-  (whenlet ban (banned-sites* (sitename url))
+  (whenlet ban (ref banned-sites* (sitename url))
     (if (caris ban 'ignore) (ignore nil user 'site-ban))
     (kill i 'site-ban)))
 
 (def ip-ban-test (i ip)
-  (if (banned-ips* ip) (kill i 'banned-ip)))
+  (if (ref banned-ips* ip) (kill i 'banned-ip)))
 
 (def comment-ban-test (user i ip string kill-list ignore-list)
   (when (some [posmatch _ string] ignore-list)
     (ignore nil user 'comment-ban))
-  (when (or (banned-ips* ip) (some [posmatch _ string] kill-list))
+  (when (or (ref banned-ips* ip) (some [posmatch _ string] kill-list))
     (kill i 'comment-ban)))
 
 ; An IP is banned when multiple ignored users have submitted over
@@ -1729,7 +1729,7 @@ function vote(node) {
     (= p!parts (map get!id (map [create-pollopt p nil nil _ user ip]
                                 (paras opts))))
     (save-item p)
-    (= (items* p!id) p)
+    (= (ref items* p!id) p)
     (push p stories*)
     p))
 
@@ -1738,7 +1738,7 @@ function vote(node) {
                      'url url 'title title 'text text 'parent p!id
                      'by user 'ip ip)
     (save-item o)
-    (= (items* o!id) o) 
+    (= (ref items* o!id) o) 
     o))
 
 (def add-pollopt-page (p user)
@@ -1805,10 +1805,10 @@ function vote(node) {
 
 (def note-baditem (user ip)
   (unless (admin user)
-    (++ (baditemreqs* ip 0))
-    (with (r (requests/ip* ip) b (baditemreqs* ip))
+    (++ (ref baditemreqs* ip 0))
+    (with (r (ref requests/ip* ip) b (ref baditemreqs* ip))
        (when (and (> r 500) (> (/ b r) baditem-threshold*))
-         (set (throttle-ips* ip))))))
+         (set (ref throttle-ips* ip))))))
 
 ; redefined later
 
@@ -1849,19 +1849,19 @@ function vote(node) {
 
 (defvar displayfn* (table))
 
-(= (displayfn* 'story)   (fn (n i user here inlist)
-                           (display-story n i user here)))
+(= (ref displayfn* 'story)   (fn (n i user here inlist)
+                               (display-story n i user here)))
 
-(= (displayfn* 'comment) (fn (n i user here inlist)
-                           (display-comment n i user here nil 0 nil inlist)))
+(= (ref displayfn* 'comment) (fn (n i user here inlist)
+                               (display-comment n i user here nil 0 nil inlist)))
 
-(= (displayfn* 'poll)    (displayfn* 'story))
+(= (ref displayfn* 'poll)    (ref displayfn* 'story))
 
-(= (displayfn* 'pollopt) (fn (n i user here inlist)
-                           (display-pollopt n i user here)))
+(= (ref displayfn* 'pollopt) (fn (n i user here inlist)
+                               (display-pollopt n i user here)))
 
 (def display-item (n i user here (o inlist))
-  ((displayfn* (i 'type)) n i user here inlist))
+  ((ref displayfn* (ref i 'type)) n i user here inlist))
 
 (def superparent (i)
   (aif i!parent (superparent:item it) i))
@@ -1888,11 +1888,11 @@ function vote(node) {
         (edit-page user i)
         (pr "No such item."))))
 
-(def editable-type (i) (fieldfn* i!type))
+(def editable-type (i) (ref fieldfn* i!type))
 
 (defvar fieldfn* (table))
 
-(= (fieldfn* 'story)
+(= (ref fieldfn* 'story)
    (fn (user s)
      (with (a (admin user)  e (editor user)  x (canedit user s))
        `((string1 title     ,s!title       ,t ,x)
@@ -1900,20 +1900,20 @@ function vote(node) {
          (mdtext2 text      ,s!text        ,t ,x)
          ,@(standard-item-fields s a e x)))))
 
-(= (fieldfn* 'comment)
+(= (ref fieldfn* 'comment)
    (fn (user c)
      (with (a (admin user)  e (editor user)  x (canedit user c))
        `((mdtext  text      ,c!text        ,t ,x)
          ,@(standard-item-fields c a e x)))))
 
-(= (fieldfn* 'poll)
+(= (ref fieldfn* 'poll)
    (fn (user p)
      (with (a (admin user)  e (editor user)  x (canedit user p))
        `((string1 title     ,p!title       ,t ,x)
          (mdtext2 text      ,p!text        ,t ,x)
          ,@(standard-item-fields p a e x)))))
 
-(= (fieldfn* 'pollopt)
+(= (ref fieldfn* 'pollopt)
    (fn (user p)
      (with (a (admin user)  e (editor user)  x (canedit user p))
        `((string  title     ,p!title       ,t ,x)
@@ -1944,7 +1944,7 @@ function vote(node) {
            (display-item-text i user))
       (br2)
       (vars-form user
-                 ((fieldfn* i!type) user i)
+                 ((ref fieldfn* i!type) user i)
                  (fn (name val) 
                    (unless (ignore-edit user i name val)
                      (when (and (is name 'dead) val (no i!dead))
@@ -1953,7 +1953,7 @@ function vote(node) {
                  (fn () (if (admin user) (pushnew 'locked i!keys))
                         (save-item i)
                         (metastory&adjust-rank i)
-                        (wipe (comment-cache* i!id))
+                        (wipe (ref comment-cache* i!id))
                         (edit-page user i)))
       (hook 'edit user i))))
 
@@ -2020,11 +2020,11 @@ function vote(node) {
   (or (ignored u) (< (karma u) comment-threshold*)))
 
 (def create-comment (parent text user ip)
-  (newslog ip user 'comment (parent 'id))
+  (newslog ip user 'comment (ref parent 'id))
   (let c (inst 'item 'type 'comment 'id (new-item-id)
                      'text text 'parent parent!id 'by user 'ip ip)
     (save-item c)
-    (= (items* c!id) c)
+    (= (ref items* c!id) c)
     (push c!id parent!kids)
     (save-item parent)
     (whenlet s (superparent c)
@@ -2087,13 +2087,13 @@ function vote(node) {
       (gen-comment-body c user whence astree indent showpar showon)))
 
 (def cached-comment-body (c user whence indent)
-  (or (and (> (or (comment-cache-timeout* c!id) 0) (seconds))
-           (awhen (comment-cache* c!id)
+  (or (and (> (or (ref comment-cache-timeout* c!id) 0) (seconds))
+           (awhen (ref comment-cache* c!id)
              (++ cc-hits*)
              it))
-      (= (comment-cache-timeout* c!id)
+      (= (ref comment-cache-timeout* c!id)
           (cc-timeout c!time)
-         (comment-cache* c!id)
+         (ref comment-cache* c!id)
           (tostring (gen-comment-body c user whence t indent nil nil)))))
 
 ; Cache for the remainder of the current minute, hour, or day.
@@ -2108,14 +2108,14 @@ function vote(node) {
 
 (def gen-comment-body (c user whence astree indent showpar showon)
   (tag (td class 'default)
-    (let parent (and (or (no astree) showpar) (c 'parent))
+    (let parent (and (or (no astree) showpar) (ref c 'parent))
       (tag (div style "margin-top:2px; margin-bottom:-10px; ")
         (spanclass comhead
           (itemline c user)
           (permalink c user)
           (when parent
             (when (cansee user c) (pr bar*))
-            (link "parent" (item-url ((item parent) 'id))))
+            (link "parent" (item-url (ref (item parent) 'id))))
           (editlink c user)
           (killlink c user whence)
           (blastlink c user whence)
@@ -2484,12 +2484,12 @@ first asterisk isn't whitespace.
                                        (rem (fn (d)
                                               (some [caris _ d] pairs))
                                             (keys banned-sites*)))))
-      (let ban (car (banned-sites* site))
+      (let ban (car (ref banned-sites* site))
         (tr (tdr (when deads
                    (onlink (len deads)
                            (listpage user (msec) deads
                                      nil (+ "killed at " site) "badsites"))))
-            (tdr (when deads (pr (round (days-since ((car deads) 'time))))))
+            (tdr (when deads (pr (round (days-since (ref (car deads) 'time))))))
             (td site)
             (td (w/rlink (do (set-site-ban user site nil) "badsites")
                   (fontcolor (if ban gray.220 black) (pr "x"))))
@@ -2504,7 +2504,7 @@ first asterisk isn't whitespace.
 (defcache killedsites 300
   (let bads (table [each-loaded-item i
                      (awhen (and i!dead (sitename i!url))
-                       (push i (_ it)))])
+                       (push i (ref _ it)))])
     (with (acc nil deadcount (table))
       (each (site items) bads
         (let n (len items)
@@ -2518,7 +2518,7 @@ first asterisk isn't whitespace.
 (defcache banned-site-items 300
   (table [each-loaded-item i
            (awhen (and i!dead (check (sitename i!url) banned-sites*))
-             (push i (_ it)))]))
+             (push i (ref _ it)))]))
 
 ; Would be nice to auto unban ips whose most recent submission is > n 
 ; days old, but hard to do because of lazy loading.  Would have to keep
@@ -2531,7 +2531,7 @@ first asterisk isn't whitespace.
     (sptab
       (row "IP" "Days" "Dead" "Live" "Users")
       (each ip ips
-        (tr (td (let banned (banned-ips* ip)
+        (tr (td (let banned (ref banned-ips* ip)
                   (w/rlink (do (set-ip-ban user ip (no banned))
                                "badips")
                     (fontcolor (if banned darkred) (pr ip)))))
@@ -2553,10 +2553,10 @@ first asterisk isn't whitespace.
   (with (bads (table) goods (table))
     (each-loaded-item s
       (if (and s!dead (commentable s))
-          (push s (bads  s!ip))
-          (push s (goods s!ip))))
-    (each (k v) bads  (zap rev (bads  k)))
-    (each (k v) goods (zap rev (goods k)))
+          (push s (ref bads  s!ip))
+          (push s (ref goods s!ip))))
+    (each (k v) bads  (zap rev (ref bads  k)))
+    (each (k v) goods (zap rev (ref goods k)))
     (list bads goods)))
 
 (def sorted-badips (bads goods)
@@ -2564,7 +2564,7 @@ first asterisk isn't whitespace.
                 (+ ips (rem [mem _ ips] (keys banned-ips*))))
           subs (table 
                  [each ip ips
-                   (= (_ ip) (dedup (map !by (+ (bads ip) (goods ip)))))]))
+                   (= (ref _ ip) (dedup (map !by (+ (bads ip) (goods ip)))))]))
     (list subs
           (sort (compare > (memo [badness (subs _) (bads _) (goods _)]))
                 ips))))
@@ -2622,10 +2622,10 @@ first asterisk isn't whitespace.
     (spacerow 10)
     (each name (sort < newsop-names*)
       (tr (td name)
-          (let ms (only.avg (qlist (optimes* name)))
+          (let ms (only.avg (qlist (ref optimes* name)))
             (tdr:prt (only.round ms))
-            (tdr:prt (only.med (qlist (optimes* name))))
-            (let n (opcounts* name)
+            (tdr:prt (only.med (qlist (ref optimes* name))))
+            (let n (ref opcounts* name)
               (tdr:prt n)
               (tdr:prt (and n (round (/ (* n ms) 1000))))))))))
 
@@ -2641,24 +2641,24 @@ first asterisk isn't whitespace.
 (defvar hn-itemcount* 100)
 
 (def hn->id (hnid)
-  (or (hn->id* hnid)
+  (or (ref hn->id* hnid)
       (whenlet i (car:loaded-items [is _!hnid hnid])
-        (= (hn->id* hnid) i!id))))
+        (= (ref hn->id* hnid) i!id))))
 
 (def process-hn-story (user url title showtext text ip hnid hnscore)
   (aif (hn->id hnid)
-       (items* it)
+       (ref items* it)
        (let s (create-story url title text user ip hnid hnscore)
          (submit-item user s)
          s)))
 
 (def hn-story (id)
-  (or (hn-items* id)
-      (= (hn-items* id) (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/item/@(do id).json"))))
+  (or (ref hn-items* id)
+      (= (ref hn-items* id) (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/item/@(do id).json"))))
 
 (def hn-item (id)
   (or (aand (hn->id id)
-            (items* it))
+            (ref items* it))
       (let story (hn-story id)
         ;(prn story)
         (let u (ensure-news-user (or story!by "root"))

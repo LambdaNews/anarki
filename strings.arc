@@ -33,7 +33,7 @@
   (accum a
     (let f (testify test)
       (forlen i seq
-        (if (f (seq i)) (a i))))))
+        (if (f (ref seq i)) (a i))))))
 
 (def lines (s)
   (accum a
@@ -64,7 +64,7 @@
 (def urldecode (s)
  (tostring
   (forlen i s
-    (caselet c (s i)
+    (caselet c (ref s i)
       #\+ (writec #\space)
       #\% (do (when (> (- (len s) i) 2)
                 (writeb (int (cut s (+ i 1) (+ i 3)) 16)))
@@ -85,14 +85,14 @@
        (unless (> (+ ,gstart ,(len pat)) (len ,gstring))
          (and ,@(let acc nil
                   (forlen i pat
-                    (push `(is ,(pat i) (,gstring (+ ,gstart ,i)))
+                    (push `(is ,(ref pat i) (ref ,gstring (+ ,gstart ,i)))
                            acc))
                   (rev acc)))))))
 
 ; litmatch would be cleaner if map worked for string and integer args:
 
 ;             ,@(map (fn (n c)  
-;                      `(is ,c (,gstring (+ ,gstart ,n))))
+;                      `(is ,c (ref ,gstring (+ ,gstart ,n))))
 ;                    (len pat)
 ;                    pat)
 
@@ -102,8 +102,8 @@
        (unless (> ,(len pat) (len ,gstring))
          (and ,@(let acc nil
                   (forlen i pat
-                    (push `(is ,(pat (- (len pat) 1 i)) 
-                               (,gstring (- ,glen 1 ,i)))
+                    (push `(is ,(ref pat (- (len pat) 1 i)) 
+                               (ref ,gstring (- ,glen 1 ,i)))
                            acc))
                   (rev acc)))))))
 
@@ -111,7 +111,7 @@
   (catch
     (if (isa pat 'fn)
         (for i start (- (len seq) 1)
-          (when (pat (seq i)) (throw i)))
+          (when (ref pat (ref seq i)) (throw i)))
         (for i start (- (len seq) (len pat))
           (when (headmatch pat seq i) (throw i))))
     nil))
@@ -120,7 +120,7 @@
   (let p (len pat) 
     ((afn (i)      
        (or (is i p) 
-           (and (is (pat i) (seq (+ i start)))
+           (and (is (ref pat i) (ref seq (+ i start)))
                 (self (+ i 1)))))
      0)))
 
@@ -135,7 +135,7 @@
         (if (and (< i boundary) (headmatch old seq i))
             (do (++ i (- (len old) 1))
                 (pr new))
-            (pr (seq i)))))))
+            (pr (ref seq i)))))))
 
 (def multisubst (pairs seq)
   (tostring 
@@ -143,7 +143,7 @@
       (iflet (old new) (find [begins seq (car _) i] pairs)
         (do (++ i (- (len old) 1))
             (pr new))
-        (pr (seq i))))))
+        (pr (ref seq i))))))
 
 ; not a good name
 
@@ -166,7 +166,7 @@
              (if (in where 'front 'both) p1 0)
              (when (in where 'end 'both)
                (let i (- (len s) 1)
-                 (while (and (> i p1) (f (s i)))
+                 (while (and (> i p1) (f (ref s i)))
                    (-- i))
                  (+ i 1))))
         "")))

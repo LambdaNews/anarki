@@ -25,7 +25,7 @@
      openids*      (safe-load-table oidfile*)
      admins*       (map string (safe-load-admins))
      cookie->user* (safe-load-table cookfile*))
-  (maptable (fn (k v) (= (user->cookie* v) k))
+  (maptable (fn (k v) (= (ref user->cookie* v) k))
             cookie->user*))
 
 ; idea: a bidirectional table, so don't need two vars (and sets)
@@ -35,8 +35,8 @@
 (defvar logins* (table))
 
 (def get-user (req) 
-  (let u (aand (alref req!cooks "user") (cookie->user* (sym it)))
-    (when u (= (logins* u) req!ip))
+  (let u (aand (alref req!cooks "user") (ref cookie->user* (sym it)))
+    (when u (= (ref logins* u) req!ip))
     u))
 
 (mac when-umatch (user req . body)
@@ -86,7 +86,7 @@
 
 (def admin (u) (and u (mem u admins*)))
 
-(def user-exists (u) (and u (hpasswords* u) u))
+(def user-exists (u) (and u (ref hpasswords* u) u))
 
 (def admin-page (user . msg)
   (whitepage 
@@ -111,8 +111,8 @@
 
 (def cook-user (user)
   (let id (new-user-cookie)
-    (= (cookie->user*   id) user
-       (user->cookie* user)   id)
+    (= (ref cookie->user*   id) user
+       (ref user->cookie* user)   id)
     (save-table cookie->user* cookfile*)
     id))
 
@@ -120,15 +120,15 @@
 
 (def new-user-cookie ()
   (let id (unique-id)
-    (if (cookie->user* id) (new-user-cookie) id)))
+    (if (ref cookie->user* id) (new-user-cookie) id)))
 
 (def logout-user (user)
-  (wipe (logins* user))
-  (wipe (cookie->user* (user->cookie* user)) (user->cookie* user))
+  (wipe (ref logins* user))
+  (wipe (ref cookie->user* (ref user->cookie* user)) (ref user->cookie* user))
   (save-table cookie->user* cookfile*))
 
 (def create-acct (user pw)
-  (set (dc-usernames* (downcase user)))
+  (set (ref dc-usernames* (downcase user)))
   (set-pw user pw))
 
 (def disable-acct (user)
@@ -136,7 +136,7 @@
   (logout-user user))
   
 (def set-pw (user pw)
-  (= (hpasswords* user) (and pw (bcrypt pw)))
+  (= (ref hpasswords* user) (and pw (bcrypt pw)))
   (save-table hpasswords* hpwfile*))
 
 (def hello-page (user ip)
@@ -174,7 +174,7 @@
 (def login-handler (req switch afterward)
   (logout-user (get-user req))
   (aif (good-login (arg req "u") (arg req "p") req!ip)
-       (login it req!ip (user->cookie* it) afterward)
+       (login it req!ip (ref user->cookie* it) afterward)
        (failed-login switch "Bad login." afterward)))
 
 (def create-handler (req switch afterward)
@@ -186,7 +186,7 @@
              (login user req!ip (cook-user user) afterward)))))
 
 (def login (user ip cookie afterward)
-  (= (logins* user) ip)
+  (= (ref logins* user) ip)
   (prcookie cookie)
   (if (acons afterward)
       (let (f url) afterward
@@ -215,10 +215,10 @@
 
 (def good-login (user pw ip)
   (let record (list (seconds) ip user)
-    (when (and user pw (aand (shash pw) (is it (hpasswords* user))))
+    (when (and user pw (aand (shash pw) (is it (ref hpasswords* user))))
       (set-pw user pw))
-    (if (and user pw (bcrypt pw (hpasswords* user)))
-        (do (unless (user->cookie* user) (cook-user user))
+    (if (and user pw (bcrypt pw (ref hpasswords* user)))
+        (do (unless (ref user->cookie* user) (cook-user user))
             (enq-limit record good-logins*)
             user)
         (do (enq-limit record bad-logins*)
@@ -250,8 +250,8 @@
 (def username-taken (user)
   (when (empty dc-usernames*)
     (each (k v) hpasswords*
-      (set (dc-usernames* (downcase k)))))
-  (dc-usernames* (downcase user)))
+      (set (ref dc-usernames* (downcase k)))))
+  (ref dc-usernames* (downcase user)))
 
 (defvar username-enabled* [do t])
 
@@ -274,7 +274,7 @@
        (>= (len str) min)
        (~find (fn (c) (no (or (alphadig c) (in c #\- #\_))))
               str)
-       (isnt (str 0) #\-)
+       (isnt (ref str 0) #\-)
        (or (no max) (<= (len str) max))
        str))
 
@@ -423,7 +423,7 @@
 
 (def vars-form (user fields f done (o button "update") (o lasts))
   (taform lasts
-          (if (all [no (_ 4)] fields)
+          (if (all [no (ref _ 4)] fields)
               (fn (req))
               (fn (req)
                 (when-umatch user req
@@ -439,7 +439,7 @@
                   (done))))
      (tab
        (showvars fields))
-     (unless (all [no (_ 4)] fields)  ; no modifiable fields
+     (unless (all [no (ref _ 4)] fields)  ; no modifiable fields
        (br)
        (submit button))))
                 
@@ -472,10 +472,10 @@
                (iflet newi (parabreak s i (if (is i 0) 1 0))
                       (do (unless (is i 0) (pr "<p>"))
                           (= i (- newi 1)))
-                      (and (is (s i) #\*)
+                      (and (is (ref s i) #\*)
                            (or ital 
                                (atend i s) 
-                               (and (~whitec (s (+ i 1)))
+                               (and (~whitec (ref s (+ i 1)))
                                     (pos #\* s (+ i 1)))))
                        (do (pr (if ital "</i>" "<i>"))
                            (= ital (no ital)))
@@ -487,10 +487,10 @@
                          (tag (a href url rel 'nofollow)
                            (pr (if (no maxurl) url (ellipsize url maxurl))))
                          (= i (- n 1)))
-                       (writec (s i))))))))
+                       (writec (ref s i))))))))
 
 (def indented-code (s i (o newlines 0) (o spaces 0))
-  (let c (s i)
+  (let c (ref s i)
     (if (nonwhite c)
          (if (and (> newlines 1) (> spaces 1))
              (list i spaces)
@@ -504,7 +504,7 @@
 ; If i is start a paragraph break, returns index of start of next para.
 
 (def parabreak (s i (o newlines 0))
-  (let c (s i)
+  (let c (ref s i)
     (if (or (nonwhite c) (atend i s))
         (if (> newlines 1) i nil)
         (parabreak s (+ i 1) (+ newlines (if (is c #\newline) 1 0))))))
@@ -539,7 +539,7 @@
 ; balancing a previous open delimiter.
 
 (def urlend (s i (o indelim))
-  (let c (s i)
+  (let c (ref s i)
     (if (atend i s)
          (if ((orf punc whitec opendelim) c) 
               i 
@@ -547,8 +547,8 @@
               (if indelim (+ i 1) i)
              (+ i 1))
         (if (or (whitec c)
-                (and (punc c) (whitec (s (+ i 1))))
-                (and ((orf whitec punc) (s (+ i 1)))
+                (and (punc c) (whitec (ref s (+ i 1))))
+                (and ((orf whitec punc) (ref s (+ i 1)))
                      (or (opendelim c)
                          (and (closedelim c) (no indelim)))))
             i
@@ -565,9 +565,9 @@
     (until (let left (- (len s) i 1)
              (or (is left 0)
                  (and (> left 2)
-                      (is (s (+ i 1)) #\newline)
-                      (nonwhite (s (+ i 2))))))
-     (writec (s (++ i))))))
+                      (is (ref s (+ i 1)) #\newline)
+                      (nonwhite (ref s (+ i 2))))))
+     (writec (ref s (++ i))))))
 
 (def unmarkdown (s)
   (tostring
@@ -586,12 +586,12 @@
                      (= i (aif (posmatch "</a>" s endurl)
                                (+ it 3)
                                endurl)))
-                 (writec (s i))))
+                 (writec (ref s i))))
           (litmatch "<pre><code>" s i)
            (awhen (findsubseq "</code></pre>" s (+ i 12))
              (pr (cut s (+ i 11) it))
              (= i (+ it 12)))
-          (writec (s i))))))
+          (writec (ref s i))))))
 
 
 (def english-time (min)
@@ -626,7 +626,7 @@
                   "August" "September" "October" "November" "December"))
 
 (def english-date ((y m d))
-  (string d " " (months* (- m 1)) " " y))
+  (string d " " (ref months* (- m 1)) " " y))
 
 (defvar month-names* (obj "january"    1  "jan"        1
                           "february"   2  "feb"        2
@@ -641,7 +641,7 @@
                           "november"  11  "nov"       11
                           "december"  12  "dec"       12))
 
-(def monthnum (s) (month-names* (downcase s)))
+(def monthnum (s) (ref month-names* (downcase s)))
 
 ; Doesn't work for BC dates.
 

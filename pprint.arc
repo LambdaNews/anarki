@@ -21,7 +21,7 @@
        (do (unless noindent (sp col))
            (pr "'")
            (ppr (cadr expr) (+ col 1) t))
-      (bodops* (car expr))
+      (ref bodops* (car expr))
        (do (unless noindent (sp col))
            (let whole (tostring (write expr))
              (if (< (len whole) oneline*)
@@ -35,7 +35,7 @@
 
 (def ppr-progn (expr col noindent)
   (lpar)
-  (let n (bodops* (car expr))
+  (let n (ref bodops* (car expr))
     (let str (tostring (write-spaced (firstn n expr)))
       (unless (is n 0) (pr str) (sp))
       (ppr (expr n) (+ col (len str) 2) t))

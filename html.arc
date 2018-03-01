@@ -4,7 +4,7 @@
 (def color (r g b)
   (with (c (table) 
          f (fn (x) (if (< x 0) 0 (> x 255) 255 x)))
-    (= (c 'r) (f r) (c 'g) (f g) (c 'b) (f b))
+    (= (ref c 'r) (f r) (ref c 'g) (f g) (ref c 'b) (f b))
     c))
 
 (def dehex (str) (errsafe (coerce str 'int 16)))
@@ -29,19 +29,19 @@
 (defvar opmeths* (table))
 
 (mac opmeth args
-  `(opmeths* (list ,@args)))
+  `(ref opmeths* (list ,@args)))
 
 (mac attribute (tag opt f)
-  `(= (opmeths* (list ',tag ',opt)) ,f))
+  `(= (ref opmeths* (list ',tag ',opt)) ,f))
 
 (defvar hexreps (table))
 
-(for i 0 255 (= (hexreps i)
+(for i 0 255 (= (ref hexreps i)
                 (let s (coerce i 'string 16)
                   (if (is (len s) 1) (+ "0" s) s))))
 
 (defmemo hexrep (col)
-  (+ (hexreps (col 'r)) (hexreps (col 'g)) (hexreps (col 'b))))
+  (+ (ref hexreps (ref col 'r)) (ref hexreps (ref col 'g)) (ref hexreps (ref col 'b))))
 
 (def opcolor (key val) 
   (w/uniq gv
@@ -186,7 +186,7 @@
                         (tag-options spec rest))
                   (tag-options spec rest))
               (do
-                (pr "<!-- ignoring " opt " for " spec "-->")
+                (prn "<!-- ignoring " opt " for " spec "-->")
                 (tag-options spec rest)))))))
 
 (def precomputable-tagopt (val)

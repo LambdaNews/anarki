@@ -13,4 +13,9 @@ cd ..
 home="$(pwd)"
 cd "${dir}"
 
-exec racket -t "${home}/as.scm" "$@"
+if [ ! -z "${ARC_DEBUG}" ]
+then
+  exec racket -l errortrace -t "${home}/as.scm" "$@"
+else
+  exec racket -t "${home}/as.scm" "$@"
+fi

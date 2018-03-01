@@ -7,7 +7,7 @@
 (defvar staticdir* "static/")
 
 (defvar quitsrv* nil)
-(defvar breaksrv* nil) 
+(defvar breaksrv* (getenv "ARC_BREAK"))
 
 (def serve ((o port 8080))
   (wipe quitsrv*)
@@ -53,11 +53,11 @@
 
 (def handle-request-1 (s)
   (let (i o ip) (socket-accept s)
-    (if (and (or (ignore-ips* ip) (abusive-ip ip))
-             (++ (spurned* ip 0)))
+    (if (and (or (ref ignore-ips* ip) (abusive-ip ip))
+             (++ (ref spurned* ip 0)))
         (force-close i o)
         (do (++ requests*)
-            (++ (requests/ip* ip 0))
+            (++ (ref requests/ip* ip 0))
             (with (th1 nil th2 nil)
               (= th1 (thread
                        (after (handle-request-thread i o ip)
@@ -85,17 +85,17 @@
 (defvar dos-window* 2)
 
 (def abusive-ip (ip)
-  (and (only.> (requests/ip* ip) 250)
+  (and (only.> (ref requests/ip* ip) 250)
        (let now (seconds)
-         (do1 (if (req-times* ip)
-                  (and (>= (qlen (req-times* ip)) 
-                           (if (throttle-ips* ip) 1 req-limit*))
-                       (let dt (- now (deq (req-times* ip)))
-                         (if (< dt dos-window*) (set (ignore-ips* ip)))
+         (do1 (if (ref req-times* ip)
+                  (and (>= (qlen (ref req-times* ip)) 
+                           (if (ref throttle-ips* ip) 1 req-limit*))
+                       (let dt (- now (deq (ref req-times* ip)))
+                         (if (< dt dos-window*) (set (ref ignore-ips* ip)))
                          (< dt req-window*)))
-                  (do (= (req-times* ip) (queue))
+                  (do (= (ref req-times* ip) (queue))
                       nil))
-              (enq now (req-times* ip))))))
+              (enq now (ref req-times* ip))))))
 
 (def handle-request-thread (i o ip)
   (with (nls 0 lines nil line nil responded nil t0 (msec))
@@ -160,7 +160,7 @@ Content-Type: "
      "
 Connection: close"))
 
-(map (fn ((k v)) (= (type-header* k) (gen-type-header v)))
+(map (fn ((k v)) (= (ref type-header* k) (gen-type-header v)))
      '((gif       "image/gif")
        (jpg       "image/jpeg")
        (png       "image/png")
@@ -177,28 +177,28 @@ Connection: close"))
 (def save-optime (name elapsed)
   ; this is the place to put a/b testing
   ; toggle a flag and push elapsed into one of two lists
-  (++ (opcounts* name 0))
-  (unless (optimes* name) (= (optimes* name) (queue)))
-  (enq-limit elapsed (optimes* name) 1000))
+  (++ (ref opcounts* name 0))
+  (unless (ref optimes* name) (= (ref optimes* name) (queue)))
+  (enq-limit elapsed (ref optimes* name) 1000))
 
 ; For ops that want to add their own headers.  They must thus remember 
 ; to prn a blank line before anything meant to be part of the page.
 
 (mac defop-raw (name parms . body)
   (w/uniq t1
-    `(= (srvops* ',name) 
+    `(= (ref srvops* ',name) 
         (fn ,parms 
           (let ,t1 (msec)
             (do1 (do ,@body)
                  (save-optime ',name (- (msec) ,t1))))))))
 
 (mac defopr-raw (name parms . body)
-  `(= (redirector* ',name) t
-      (srvops* ',name)     (fn ,parms ,@body)))
+  `(= (ref redirector* ',name) t
+      (ref srvops* ',name)     (fn ,parms ,@body)))
 
 (mac defop (name parm . body)
   (w/uniq gs
-    `(do (wipe (redirector* ',name))
+    `(do (wipe (ref redirector* ',name))
          (defop-raw ,name (,gs ,parm) 
            (w/stdout ,gs (prn) ,@body)))))
 
@@ -206,11 +206,11 @@ Connection: close"))
 
 (mac defopr (name parm . body)
   (w/uniq gs
-    `(do (set (redirector* ',name))
+    `(do (set (ref redirector* ',name))
          (defop-raw ,name (,gs ,parm)
            ,@body))))
 
-;(mac testop (name . args) `((srvops* ',name) ,@args))
+;(mac testop (name . args) `((ref srvops* ',name) ,@args))
 
 (deftem request
   args  nil
@@ -223,19 +223,19 @@ Connection: close"))
 
 (def respond (str op args cooks ip)
   (w/stdout str
-    (iflet f (srvops* op)
+    (iflet f (ref srvops* op)
            (let req (inst 'request 'args args 'cooks cooks 'ip ip)
-             (if (redirector* op)
+             (if (ref redirector* op)
                  (do (prn rdheader*)
                      (prn "Location: " (f str req))
                      (prn))
                  (do (prn header*)
-                     (awhen (max-age* op)
+                     (awhen (ref max-age* op)
                        (prn "Cache-Control: max-age=" it))
                      (f str req))))
            (let filetype (static-filetype op)
              (aif (and filetype (file-exists (string staticdir* op)))
-                  (do (prn (type-header* filetype))
+                  (do (prn (ref type-header* filetype))
                       (awhen static-max-age*
                         (prn "Cache-Control: max-age=" it))
                       (prn)
@@ -322,17 +322,17 @@ Connection: close"))
 ; count on huge (expt 64 10) size of fnid space to avoid clashes
 
 (def new-fnid ()
-  (check (sym (rand-string 10)) ~fns* (new-fnid)))
+  (check (sym (rand-string 10)) [~ref fns* _] (new-fnid)))
 
 (def fnid (f)
   (atlet key (new-fnid)
-    (= (fns* key) f)
+    (= (ref fns* key) f)
     (push key fnids*)
     key))
 
 (def timed-fnid (lasts f)
   (atlet key (new-fnid)
-    (= (fns* key) f)
+    (= (ref fns* key) f)
     (push (list key (seconds) lasts) timed-fnids*)
     key))
 
@@ -342,7 +342,7 @@ Connection: close"))
 
 (mac afnid (f)
   `(atlet it (new-fnid)
-     (= (fns* it) ,f)
+     (= (ref fns* it) ,f)
      (push it fnids*)
      it))
 
@@ -360,14 +360,14 @@ Connection: close"))
   (when (len> fns* n) 
     (pull (fn ((id created lasts))
             (when (> (since created) lasts)    
-              (wipe (fns* id))
+              (wipe (ref fns* id))
               t))
           timed-fnids*)
     (atlet nharvest (trunc (/ n 10))
       (let (kill keep) (split (rev fnids*) nharvest)
         (= fnids* (rev keep)) 
         (each id kill 
-          (wipe (fns* id)))))))
+          (wipe (ref fns* id)))))))
 
 (defvar fnurl* "/x")
 (defvar rfnurl* "/r")
@@ -378,12 +378,12 @@ Connection: close"))
  
 (defop-raw x (str req)
   (w/stdout str 
-    (aif (fns* (sym (arg req "fnid")))
+    (aif (ref fns* (sym (arg req "fnid")))
          (it req)
          (pr dead-msg*))))
 
 (defopr-raw y (str req)
-  (aif (fns* (sym (arg req "fnid")))
+  (aif (ref fns* (sym (arg req "fnid")))
        (w/stdout str (it req))
        "deadlink"))
 
@@ -391,11 +391,11 @@ Connection: close"))
 ; the fn not to generate it.
 
 (defop-raw a (str req)
-  (aif (fns* (sym (arg req "fnid")))
+  (aif (ref fns* (sym (arg req "fnid")))
        (subst "\n" "\n" (tostring (it req)))))
 
 (defopr r req
-  (aif (fns* (sym (arg req "fnid")))
+  (aif (ref fns* (sym (arg req "fnid")))
        (it req)
        "deadlink"))
 
@@ -513,9 +513,9 @@ Connection: close"))
 
 (def unique-id ((o len 8))
   (let id (sym (rand-string (max 5 len)))
-    (if (unique-ids* id)
+    (if (ref unique-ids* id)
         (unique-id)
-        (= (unique-ids* id) id))))
+        (= (ref unique-ids* id) id))))
 
 (def srvlog (type . args)
   (let s (tostring:atomic (apply prs (seconds) args) (prn))
@@ -551,7 +551,7 @@ Connection: close"))
                                          leaders)))
                              requests/ip*)
                    leaders)
-          (let n (requests/ip* ip)
+          (let n (ref requests/ip* ip)
             (row ip n (pr (num (* 100 (/ n requests*)) 1)))))))))
 
 (defop spurned req
@@ -577,11 +577,11 @@ Connection: close"))
 (defvar pending-bgthreads* nil)
 
 (def new-bgthread (id f sec)
-  (aif (bgthreads* id) (break-thread it))
-  (= (bgthreads* id) (new-thread (fn () 
-                                   (while t
-                                     (sleep sec)
-                                     (f))))))
+  (aif (ref bgthreads* id) (break-thread it))
+  (= (ref bgthreads* id) (new-thread (fn () 
+                                       (while t
+                                         (sleep sec)
+                                         (f))))))
 
 ; should be a macro for this?
 

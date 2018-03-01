@@ -3,6 +3,7 @@
 
 (provide (all-defined-out))
 (require json)
+(require racket/sequence)
 (require racket/port)
 (require racket/pretty)
 (require racket/runtime-path)
@@ -17,11 +18,13 @@
 
 (define (ac s env)
   (cond ((string? s) (ac-string s env))
+        ((keyword? s) s)
         ((literal? s) (list 'quote s))
         ((ssyntax? s) (ac (expand-ssyntax s) env))
         ((symbol? s) (ac-var-ref s env))
         ((ssyntax? (xcar s)) (ac (cons (expand-ssyntax (car s)) (cdr s)) env))
         ((eq? (xcar s) 'quote) (list 'quote (cadr s)))
+        ((eq? (xcar s) '%call) (ac (cdr s) env))
         ((eq? (xcar s) 'quasiquote) (ac-qq (cadr s) env))
         ((eq? (xcar s) 'if) (ac-if (cdr s) env))
         ((eq? (xcar s) 'fn) (ac-fn (cadr s) (cddr s) env))
@@ -64,7 +67,6 @@
       (char? x)
       (string? x)
       (number? x)
-      (keyword? x)
       (ar-nil? x)))
 
 (define (ssyntax? x)
@@ -183,7 +185,8 @@
         ((null? (cdr toks))
          (chars->value (car toks)))
         (#t
-         (list (build-sexpr (cddr toks) orig)
+         (list (if (eqv? (cadr toks) #\!) 'ref '%call)
+               (build-sexpr (cddr toks) orig)
                (if (eqv? (cadr toks) #\!)
                    (list 'quote (chars->value (car toks)))
                    (if (or (eqv? (car toks) #\.) (eqv? (car toks) #\!))
@@ -445,11 +448,7 @@
          `(,(ac-global-name fn) ,@(ac-args '() args env)))))
       
 ; compile a function call
-; special cases for speed, to avoid compiled output like
-;   (ar-apply _pr (list 1 2))
-; which results in 1/2 the CPU time going to GC. Instead:
-;   (ar-funcall2 _pr 1 2)
-; and for (foo bar), if foo is a reference to a global variable,
+; for (foo bar), if foo is a reference to a global variable,
 ;   and it's bound to a function, generate (foo bar) instead of
 ;   (ar-funcall1 foo bar)
 
@@ -464,19 +463,8 @@
           ((and direct-calls (symbol? fn) (not (lex? fn env)) (bound? fn)
                 (procedure? (bound? fn)))
            (ac-global-call fn args env))
-          ((= (length args) 0)
-           `(ar-funcall0 ,(ac fn env) ,@(map (lambda (x) (ac x env)) args)))
-          ((= (length args) 1)
-           `(ar-funcall1 ,(ac fn env) ,@(map (lambda (x) (ac x env)) args)))
-          ((= (length args) 2)
-           `(ar-funcall2 ,(ac fn env) ,@(map (lambda (x) (ac x env)) args)))
-          ((= (length args) 3)
-           `(ar-funcall3 ,(ac fn env) ,@(map (lambda (x) (ac x env)) args)))
-          ((= (length args) 4)
-           `(ar-funcall4 ,(ac fn env) ,@(map (lambda (x) (ac x env)) args)))
           (#t
-           `(ar-apply ,(ac fn env)
-                      (list ,@(map (lambda (x) (ac x env)) args)))))))
+           `(,(ac fn env) ,@(map (lambda (x) (ac x env)) args))))))
 
 (define (ac-mac-call m args env)
   (let ((x1 (apply m args)))
@@ -587,62 +575,16 @@
 ; default vals with them.  To make compatible with existing written tables, 
 ; just use an atom or 3-elt list to keep the default.
 
-(define (ar-apply fn args)
-  (cond ((procedure? fn) 
-         (apply fn args))
-        ((pair? fn) 
-         (list-ref fn (car args)))
-        ((string? fn) 
-         (string-ref fn (car args)))
-        ((hash? fn) 
-         (hash-ref fn
-                   (car args)
-                   (if (pair? (cdr args)) (cadr args) ar-nil)))
-; experiment: means e.g. [1] is a constant fn
-;       ((or (number? fn) (symbol? fn)) fn)
-; another possibility: constant in functional pos means it gets 
-; passed to the first arg, i.e. ('kids item) means (item 'kids).
-        (#t (err "Function call on inappropriate object" fn args))))
+(define (ar-ref com ind (val ar-nil))
+  (cond ((hash? com)
+         (hash-ref com ind val))
+        ((sequence? com)
+         (sequence-ref com ind))
+        (#t (com ind))))
 
-(xdef apply (lambda (fn . args)
-               (ar-apply fn (ar-apply-args args))))
+(xdef ref ar-ref)
 
-; special cases of ar-apply for speed and to avoid consing arg lists
-
-(define (ar-funcall0 fn)
-  (if (procedure? fn)
-      (fn)
-      (ar-apply fn (list))))
-
-(define (ar-funcall1 fn arg1)
-  (if (procedure? fn)
-      (fn arg1)
-      (ar-apply fn (list arg1))))
-
-(define (ar-funcall2 fn arg1 arg2)
-  (if (procedure? fn)
-      (fn arg1 arg2)
-      (ar-apply fn (list arg1 arg2))))
-
-(define (ar-funcall3 fn arg1 arg2 arg3)
-  (if (procedure? fn)
-      (fn arg1 arg2 arg3)
-      (ar-apply fn (list arg1 arg2 arg3))))
-
-(define (ar-funcall4 fn arg1 arg2 arg3 arg4)
-  (if (procedure? fn)
-      (fn arg1 arg2 arg3 arg4)
-      (ar-apply fn (list arg1 arg2 arg3 arg4))))
-
-; turn the arguments to Arc apply into a list.
-; if you call (apply fn 1 2 '(3 4))
-; then args is '(1 2 (3 4))
-; and we should return '(1 2 3 4)
-
-(define (ar-apply-args args)
-  (cond ((null? args) args)
-        ((null? (cdr args)) (car args))
-        (#t (cons (car args) (ar-apply-args (cdr args))))))
+(xdef apply apply)
 
 (xdef cons cons)
 
@@ -1310,14 +1252,14 @@
 
 (xdef atomic-invoke (lambda (f)
                        (if (thread-cell-ref ar-sema-cell)
-                           (ar-apply f '())
+                           (f)
                            (begin
                              (thread-cell-set! ar-sema-cell #t)
 			     (protect
 			      (lambda ()
 				(call-with-semaphore
 				 ar-the-sema
-				 (lambda () (ar-apply f '()))))
+				 f))
 			      (lambda ()
 				(thread-cell-set! ar-sema-cell #f)))))))
 

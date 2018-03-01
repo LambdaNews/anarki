@@ -248,7 +248,7 @@
   (let f (testify test)
     (if (alist seq)
         (reclist   [if (f:car _) (car _)] seq)
-        (recstring [if (f:seq _) (seq _)] seq))))
+        (recstring [if (f:ref seq _) (ref seq _)] seq))))
 
 (def isa (x y) (is (type x) y))
 
@@ -272,7 +272,7 @@
          ((afn (i)
             (if (is i n)
                 new
-                (do (sref new (apply f (map [_ i] seqs)) i)
+                (do (sref new (apply f (map [ref _ i] seqs)) i)
                     (self (+ i 1)))))
           0))
       (no (cdr seqs)) 
@@ -354,6 +354,12 @@
                ,@body))
            ',name)))
 
+(defset ref (l k)
+  (w/uniq (gl gk)
+    (list (list gl l gk k)
+          `(ref ,gl ,gk)
+          `(fn (val) (sref ,gl val ,gk)))))
+
 (defset car (x)
   (w/uniq g
     (list (list g x)
@@ -403,7 +409,7 @@
          (setforms (expand-metafn-call (ssexpand (car expr)) (cdr expr)))
         (and (acons expr) (acons (car expr)) (is (caar expr) 'get))
          (setforms (list (cadr expr) (cadr (car expr))))
-         (let f (setter (car expr))
+         (let f (ref setter (car expr))
            (if f
                (f expr)
                ; assumed to be data structure in fn position
@@ -487,7 +493,7 @@
             (maptable (fn ,var ,@body)
                       ,gseq)
             (for ,gv 0 (- (len ,gseq) 1)
-              (let ,var (,gseq ,gv) ,@body))))))
+              (let ,var (ref ,gseq ,gv) ,@body))))))
 
 ; (nthcdr x y) = (cut y x).
 
@@ -498,7 +504,7 @@
     (if (isa seq 'string)
         (let s2 (newstring (- end start))
           (for i 0 (- end start 1)
-            (= (s2 i) (seq (+ start i))))
+            (= (ref s2 i) (ref seq (+ start i))))
           s2)
         (firstn (- end start) (nthcdr start seq)))))
       
@@ -766,7 +772,7 @@
                (self (cdr seq) (+ n 1))))
          (nthcdr start seq) 
          start)
-        (recstring [if (f (seq _)) _] seq start))))
+        (recstring [if (f (ref seq _)) _] seq start))))
 
 (def even (n) (is (mod n 2) 0))
 
@@ -885,7 +891,7 @@
         (while (< i n)
           (let x (readb str)
              (unless (> x 247)
-               (= (s i) (c (mod x nc)))
+               (= (ref s i) (ref c (mod x nc)))
                (++ i)))))
       s)))
 
@@ -956,11 +962,11 @@
 (def memo (f)
   (with (cache (table) nilcache (table))
     (fn args
-      (or (cache args)
-          (and (no (nilcache args))
+      (or (ref cache args)
+          (and (no (ref nilcache args))
                (aif (apply f args)
-                    (= (cache args) it)
-                    (do (set (nilcache args))
+                    (= (ref cache args) it)
+                    (do (set (ref nilcache args))
                         nil)))))))
 
 
@@ -1104,25 +1110,28 @@
 (def tabjs (h)
   (let h2 (table)
     (maptable (fn (k v)
-                (= (h2 (keyjs k)) (valjs v)))
+                (= (ref h2 (keyjs k)) (valjs v)))
               h)
     ;(when (empty h2)
-    ;  (= (h2 '_empty) "true"))
+    ;  (= (ref h2 '_empty) "true"))
     h2))
 
 (def jstab (h)
   (let h2 (table)
     (unless (is h 'null)
         (maptable (fn (k v)
-                    (= (h2 (jskey k)) (jsval v)))
+                    (= (ref h2 (jskey k)) (jsval v)))
                   h))
     h2))
+
+(defvar firebase-db* (or (getenv "ARC_DB") "lambda-news"))
+(defvar firebase-token* (getenv "ARC_TOKEN"))
 
 (def save-firebase (h file)
   (let js (json-stringify:tabjs h)
     (let fname (+ "/tmp/firebase-" (rand-string 10))
       (w/outfile f fname (disp js f))
-      (let x (+ "curl -fsSL -X PUT -d " #\@ fname " 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
+      (let x (+ "curl -fsSL -X PUT -d " #\@ fname " 'https://" firebase-db* ".firebaseio.com/" file ".json?access_token=" firebase-token* "'")
         (disp (+ x "\n") (stderr))
         (sleep 0.01)
         (new-thread (fn () 
@@ -1130,7 +1139,7 @@
                (rmfile fname))))))))
 
 (def load-firebase (file)
-  (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?access_token=" (getenv "ARC_TOKEN") "'")
+  (let x (+ "curl -fsSL 'https://" firebase-db* ".firebaseio.com/" file ".json?access_token=" firebase-token* "'")
     (disp (+ x "\n") (stderr))
     (let chars (tostring:system x)
       (json-parse chars))))
@@ -1139,14 +1148,14 @@
   (~is (load-firebase file) 'null))
 
 (def dir-firebase (file)
-  (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?shallow=true&access_token=" (getenv "ARC_TOKEN") "'")
+  (let x (+ "curl -fsSL 'https://" firebase-db* ".firebaseio.com/" file ".json?shallow=true&access_token=" firebase-token* "'")
     (disp (+ x "\n") (stderr))
     (let chars (tostring:system x)
       (unless (is chars "null")
         (map car (tablist:jstab:json-parse chars))))))
 
 (def firebase-fetch (file (o n) (o end))
-  (let x (+ "curl -fsSL 'https://lambda-news.firebaseio.com/" file ".json?orderBy=\"$key\"&access_token=" (getenv "ARC_TOKEN"))
+  (let x (+ "curl -fsSL 'https://" firebase-db* ".firebaseio.com/" file ".json?orderBy=\"$key\"&access_token=" firebase-token*)
     (when n
       (++ x (+ "&limitToLast=" (int n))))
     (when end
@@ -1159,7 +1168,7 @@
 
 (def firebase-list (x)
   (case (type x)
-    table (sort (fn (a b) (< a.0 b.0)) (tablist x))
+    table (sort (fn (a b) (< (ref a 0) (ref b 0))) (tablist x))
     cons (map [list _!id _] (rem 'null x))
     cons (err "firebase list" x)
     x))
@@ -1181,7 +1190,7 @@
 ;      (drain (read-table i eof) eof))))
 
 (def save-table (h file)
-  (if (getenv "ARC_TOKEN")
+  (if firebase-token*
       (save-firebase h file)
       (dispfile (json-stringify:tabjs h) file)))
 
@@ -1194,14 +1203,14 @@
             cons   (copylist x) ; (apply (fn args args) x)
             string (let new (newstring (len x))
                      (forlen i x
-                       (= (new i) (x i)))
+                       (= (ref new i) (ref x i)))
                      new)
             table  (let new (table)
                      (each (k v) x 
-                       (= (new k) v))
+                       (= (ref new k) v))
                      new)
                    (err "Can't copy " x))
-    (map (fn ((k v)) (= (x2 k) v))
+    (map (fn ((k v)) (= (ref x2 k) v))
          (pair args))
     x2))
 
@@ -1231,7 +1240,7 @@
 (def avg (ns) (/ (apply + ns) (len ns)))
 
 (def med (ns (o test >))
-  ((sort test ns) (round (/ (len ns) 2))))
+  (ref (sort test ns) (round (/ (len ns) 2))))
 
 ; Use mergesort on assumption that mostly sorting mostly sorted lists
 ; benchmark: (let td (n-of 10000 (rand 100)) (time (sort < td)) 1) 
@@ -1326,21 +1335,21 @@
 
 (mac deftem (tem . fields)
   (withs (name (carif tem) includes (if (acons tem) (cdr tem)))
-    `(= (templates* ',name) 
+    `(= (ref templates* ',name) 
         (+ (mappend templates* ',(rev includes))
            (list ,@(map (fn ((k v)) `(list ',k (fn () ,v)))
                         (pair fields)))))))
 
 (mac addtem (name . fields)
-  `(= (templates* ',name) 
+  `(= (ref templates* ',name) 
       (union (fn (x y) (is (car x) (car y)))
              (list ,@(map (fn ((k v)) `(list ',k (fn () ,v)))
                           (pair fields)))
-             (templates* ',name))))
+             (ref templates* ',name))))
 
 (def inst (tem . args)
   (let x (table)
-    (each (k v) (if (acons tem) tem (templates* tem))
+    (each (k v) (if (acons tem) tem (ref templates* tem))
       (unless (no v) (= (x k) (v))))
     (each (k v) (pair args)
       (= (x k) v))
@@ -1355,7 +1364,7 @@
 ; Note: discards fields not defined by the template.
 
 (def templatize (tem raw)
-  (with (x (inst tem) fields (if (acons tem) tem (templates* tem)))
+  (with (x (inst tem) fields (if (acons tem) tem (ref templates* tem)))
     (each (k v) raw
       (when (assoc k fields)
         (= (x k) v)))
@@ -1428,7 +1437,7 @@
       (+ (cut str 0 limit) "...")))
 
 (def rand-elt (seq) 
-  (seq (rand (len seq))))
+  (ref seq (rand (len seq))))
 
 (mac until (test . body)
   `(while (no ,test) ,@body))
@@ -1579,7 +1588,7 @@
 
 (def enq (obj q)
   (atomic
-    (++ (q 2))
+    (++ (ref q 2))
     (if (no (car q))
         (= (cadr q) (= (car q) (list obj)))
         (= (cdr (cadr q)) (list obj)
@@ -1587,12 +1596,12 @@
     (car q)))
 
 (def deq (q)
-  (atomic (unless (is (q 2) 0) (-- (q 2)))
+  (atomic (unless (is (ref q 2) 0) (-- (ref q 2)))
           (pop (car q))))
 
 ; Should redef len to do this, and make queues lists annotated queue.
 
-(def qlen (q) (q 2))
+(def qlen (q) (ref q 2))
 
 (def qlist (q) (car q))
 
@@ -1661,7 +1670,7 @@
 (def mismatch (s1 s2)
   (catch
     (on c s1
-      (when (isnt c (s2 index))
+      (when (isnt c (ref s2 index))
         (throw index)))))
 
 (def memtable (ks)
@@ -1705,16 +1714,16 @@
 (defvar hooks* (table))
 
 (def hook (name . args)
-  (aif (hooks* name) (apply it args)))
+  (aif (ref hooks* name) (apply it args)))
 
 (mac defhook (name . rest)
-  `(= (hooks* ',name) (fn ,@rest)))
+  `(= (ref hooks* ',name) (fn ,@rest)))
   
 (mac out (expr) `(pr ,(tostring (eval expr))))
 
-; if renamed this would be more natural for (map [_ user] pagefns*)
+; if renamed this would be more natural for (map [ref _ user] pagefns*)
 
-(def get (index) [_ index])
+(def get (index) [ref _ index])
 
 (defvar savers* (table))
 
@@ -1724,7 +1733,7 @@
        (do1 (= ,var (iflet ,gf (file-exists ,file)
                                (,load ,gf)
                                ,init))
-            (= (savers* ',var) (fn (,gv) (,save ,gv ,file)))))))
+            (= (ref savers* ',var) (fn (,gv) (,save ,gv ,file)))))))
 
 (mac diskvar (var file)
   `(fromdisk ,var ,file nil readfile1 writefile))
@@ -1733,7 +1742,7 @@
   `(fromdisk ,var ,file (table) load-table save-table))
 
 (mac todisk (var (o expr var))
-  `((savers* ',var) 
+  `((ref savers* ',var) 
     ,(if (is var expr) var `(= ,var ,expr))))
 
 
