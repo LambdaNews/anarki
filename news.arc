@@ -986,10 +986,11 @@ function vote(node) {
                 (if (admin user)
                     (w/rlink (do (set-site-ban user
                                                it
-                                               (case (car (ref banned-sites* it))
-                                                 nil    'ignore
-                                                 ignore 'kill
-                                                 kill   nil))
+                                               (let ban (car (ref banned-sites* it))
+                                                 (case ban
+                                                   ignore 'kill
+                                                   kill   nil
+                                                   (unless ban 'ignore))))
                                  whence)
                       (let ban (car (ref banned-sites* it))
                         (tag-if ban (font color (case ban 
