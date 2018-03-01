@@ -727,6 +727,8 @@
         ((tcp-listener? x)  'socket)
         ((exn? x)           'exception)
         ((thread? x)        'thread)
+        ((sequence? x)      'seq)
+        ((keyword? x)       'keyword)
         (#t                 (err "Type: unknown type" x))))
 (xdef type ar-type)
 
@@ -842,6 +844,12 @@
 
 (define (iround x) (inexact->exact (round x)))
 
+(define (keyword->symbol x)
+  (string->symbol (keyword->string x)))
+
+(define (symbol->keyword x)
+  (string->keyword (symbol->string x)))
+
 (define (ar-coerce x type . args)
   (cond 
     ((ar-tagged? x) (err "Can't coerce annotated object"))
@@ -863,6 +871,7 @@
                       (else      (err "Can't coerce" x type))))
     ((string? x)    (case type
                       ((sym)     (string->symbol x))
+                      ((keyword) (string->keyword x))
                       ((cons)    (string->list x))
                       ((num)     (or (apply string->number x args)
                                      (err "Can't coerce" x type)))
@@ -884,6 +893,16 @@
                       (else      (err "Can't coerce" x type))))
     ((symbol? x)    (case type 
                       ((string)  (symbol->string x))
+                      ((keyword) (symbol->keyword x))
+                      (else      (err "Can't coerce" x type))))
+    ((sequence? x)  (case type
+                      ((cons)    (sequence->list x))
+                      ((string)  (apply string (sequence->list x)))
+                      ((sym)     (string->symbol (apply string (sequence->list x))))
+                      (else      (err "Can't coerce" x type))))
+    ((keyword? x)   (case type
+                      ((string)  (keyword->string x))
+                      ((sym)     (keyword->symbol x))
                       (else      (err "Can't coerce" x type))))
     (#t             x)))
 
