@@ -64,6 +64,7 @@
       (char? x)
       (string? x)
       (number? x)
+      (keyword? x)
       (ar-nil? x)))
 
 (define (ssyntax? x)
