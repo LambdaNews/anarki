@@ -14,7 +14,7 @@
   (ensure-srvdirs)
   (map [apply new-bgthread _] pending-bgthreads*)
   (w/socket s port
-    (prn "ready to serve port " port " as user " (getuid))
+    (prn "ready to serve port " port)
     (flushout)
     (= currsock* s)
     (until quitsrv*

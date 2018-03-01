@@ -1,17 +1,14 @@
 ; Arc Compiler.
+#lang racket/base
 
-(module ac mzscheme
-
-(provide (all-defined))
-(require (lib "port.ss"))
-(require (lib "process.ss"))
-(require (lib "pretty.ss"))
-(require (lib "foreign.ss"))
-(require racket/unsafe/ops)
+(provide (all-defined-out))
 (require json)
-(require (only racket/base syntax->datum memf memq member))
-(require mzlib/etc)
-(unsafe!)
+(require racket/port)
+(require racket/pretty)
+(require racket/runtime-path)
+(require racket/system)
+(require racket/tcp)
+(require racket/unsafe/ops)
 
 ; compile an Arc expression into a Scheme expression,
 ; both represented as s-expressions.
@@ -547,14 +544,14 @@
        (namespace-set-variable-value! nm a)
        a))))
 
-(define fn-signatures (make-hash-table 'equal))
+(define fn-signatures (make-hash))
 
 ; This is a replacement for xdef that stores opeator signatures.
 ; Haven't started using it yet.
 
 (define (odef a parms b)
   (namespace-set-variable-value! (ac-global-name a) b)
-  (hash-table-put! fn-signatures a (list parms))
+  (hash-set! fn-signatures a (list parms))
   b)
 
 (xdef sig fn-signatures)
@@ -595,10 +592,10 @@
          (list-ref fn (car args)))
         ((string? fn) 
          (string-ref fn (car args)))
-        ((hash-table? fn) 
-         (hash-table-get fn
-                         (car args)
-                         (if (pair? (cdr args)) (cadr args) ar-nil)))
+        ((hash? fn) 
+         (hash-ref fn
+                   (car args)
+                   (if (pair? (cdr args)) (cadr args) ar-nil)))
 ; experiment: means e.g. [1] is a constant fn
 ;       ((or (number? fn) (symbol? fn)) fn)
 ; another possibility: constant in functional pos means it gets 
@@ -749,7 +746,7 @@
 
 (xdef len (lambda (x)
              (cond ((string? x) (string-length x))
-                   ((hash-table? x) (hash-table-count x))
+                   ((hash? x) (hash-count x))
                    (#t (length x)))))
 
 (define (ar-tagged? x)
@@ -776,7 +773,7 @@
         ((string? x)        'string)
         ((exint? x)         'int)
         ((number? x)        'num)     ; unsure about this
-        ((hash-table? x)    'table)
+        ((hash? x)          'table)
         ((output-port? x)   'output)
         ((input-port? x)    'input)
         ((tcp-listener? x)  'socket)
@@ -852,7 +849,7 @@
 
 (define (write-char* c o)
   (unless (eqv? c #\return)
-    (if (eqv? c #\newline)
+    (when (eqv? c #\newline)
       (write-char #\return o))
     (write-char c o)))
 
@@ -964,14 +961,6 @@
                                    (let-values (((us them) (tcp-addresses out)))
                                                them))))))))
 
-; allow Arc to give up root privileges after it
-; calls open-socket. thanks, Eli!
-(define setuid (get-ffi-obj 'setuid #f (_fun _int -> _int)))
-(xdef setuid setuid)
-
-(define getuid (get-ffi-obj 'getuid #f (_fun -> _int)))
-(xdef getuid getuid)
-
 (xdef new-thread thread)
 (xdef kill-thread kill-thread)
 (xdef break-thread break-thread)
@@ -1017,23 +1006,23 @@
 ; we need the latter for strings.
 
 (xdef table (lambda args
-              (let ((h (make-hash-table 'equal)))
-                (if (pair? args) ((car args) h))
+              (let ((h (make-hash)))
+                (when (pair? args) ((car args) h))
                 h)))
 
 ;(xdef table (lambda args
-;               (fill-table (make-hash-table 'equal) 
+;               (fill-table (make-hash) 
 ;                           (if (pair? args) (car args) ar-nil))))
                    
 (define (fill-table h pairs)
   (if (ar-nil? pairs)
       h
       (let ((pair (car pairs)))
-        (begin (hash-table-put! h (car pair) (cadr pair))
+        (begin (hash-set! h (car pair) (cadr pair))
                (fill-table h (cdr pairs))))))
 
 (xdef maptable (lambda (fn table)               ; arg is (fn (key value) ...)
-                  (hash-table-for-each table fn)
+                  (hash-for-each table fn)
                   table))
 
 (define (protect during after)
@@ -1104,8 +1093,11 @@
   (parameterize ((current-prompt-read ac-prompt-read))
     (read-eval-print-loop)))
 
+; https://stackoverflow.com/questions/16842811/racket-how-to-retrieve-the-path-of-the-running-file
+(define-runtime-path ac-home-path ".")
+
 (define ac-load-path
-  (list (this-expression-source-directory) (path->string (find-system-path 'orig-dir))))
+  (list (path->string ac-home-path) (path->string (find-system-path 'orig-dir))))
 
 (xdef load-path ac-load-path)
 
@@ -1121,17 +1113,17 @@
 
 (xdef resolve aresolve)
 
-(define ac-features (make-hash-table 'equal))
+(define ac-features (make-hash))
 
 (xdef features ac-features)
 
 (define (ac-feature? feature)
-  (hash-table-get ac-features feature #f))
+  (hash-ref ac-features feature #f))
 
 (xdef feature ac-feature?)
 
 (define (ac-provide feature)
-  (hash-table-put! ac-features feature feature)
+  (hash-set! ac-features feature feature)
   feature)
 
 (xdef provide ac-provide)
@@ -1159,10 +1151,9 @@
           (write x)
           (newline)
           (let ((v (arc-eval x)))
-            (if (ar-false? v)
-                (begin
-                  (display "  FAILED")
-                  (newline))))
+            (when (ar-false? v)
+              (display "  FAILED")
+              (newline)))
           (atests1 p)))))
 
 (define (aload filename)
@@ -1187,8 +1178,8 @@
 (define (acompile inname)
   (let ((inname (aresolve inname))
         (outname (string-append inname ".scm")))
-    (if (file-exists? outname)
-        (delete-file outname))
+    (when (file-exists? outname)
+      (delete-file outname))
     (call-with-input-file inname
       (lambda (ip)
         (call-with-output-file outname 
@@ -1263,9 +1254,9 @@
 
 (xdef sref 
   (lambda (com val ind)
-    (cond ((hash-table? com)  (if (ar-nil? val)
-                                  (hash-table-remove! com ind)
-                                  (hash-table-put! com ind val)))
+    (cond ((hash? com)   (if (ar-nil? val)
+                             (hash-remove! com ind)
+                             (hash-set! com ind val)))
           ((string? com) (string-set! com ind val))
           ((pair? com)   (nth-set! com ind val))
           (#t (err "Can't set reference " com ind val)))
@@ -1351,22 +1342,22 @@
 ; if there is buffered output for a non-responsive socket.
 ; must use custodian-shutdown-all instead.
 
-(define custodians (make-hash-table 'equal))
+(define custodians (make-hash))
 
 (define (associate-custodian c i o)
-  (hash-table-put! custodians i c)
-  (hash-table-put! custodians o c))
+  (hash-set! custodians i c)
+  (hash-set! custodians o c))
 
 ; if a port has a custodian, use it to close the port forcefully.
 ; also get rid of the reference to the custodian.
 ; sadly doing this to the input port also kills the output port.
 
 (define (try-custodian p)
-  (let ((c (hash-table-get custodians p #f)))
+  (let ((c (hash-ref custodians p #f)))
     (if c
         (begin
           (custodian-shutdown-all c)
-          (hash-table-remove! custodians p)
+          (hash-remove! custodians p)
           #t)
         #f)))
 
@@ -1384,8 +1375,8 @@
 
 (xdef force-close (lambda args
                        (map (lambda (p)
-                              (if (not (try-custodian p))
-                                  (ar-close p)))
+                              (unless (try-custodian p)
+                                (ar-close p)))
                             args)
                        ar-nil))
 
@@ -1463,6 +1454,4 @@
                (or (getenv name) ar-nil)))
 
 (xdef putenv putenv)
-  
-)
 
