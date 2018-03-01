@@ -2677,12 +2677,7 @@ first asterisk isn't whitespace.
 (defbg update-stories 10
   (update-hn-stories))
 
-(def refresh-token ()
-  (when (file-exists "../narc.py")
-    (putenv "ARC_TOKEN" (trim:tostring:system "cd .. && python narc.py"))
-    (getenv "ARC_TOKEN")))
-
 (defbg refresh-token 900
-  (newslog 'refresh-token (refresh-token)))
+  (newslog 'refresh-token (refresh-firebase-token)))
 
 (provide 'news)

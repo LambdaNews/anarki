@@ -1129,6 +1129,10 @@
 (defvar firebase-db* (or (getenv "ARC_DB") "lambda-news"))
 (defvar firebase-token* (getenv "ARC_TOKEN"))
 
+(def refresh-firebase-token ()
+  (when (file-exists "../narc.py")
+    (= firebase-token* (trim:tostring:system "cd .. && python narc.py"))))
+
 (def save-firebase (h file)
   (let js (json-stringify:tabjs h)
     (let fname (+ "/tmp/firebase-" (rand-string 10))
