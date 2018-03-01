@@ -804,10 +804,10 @@
 
 (xdef outfile (lambda (f . args) 
                  (open-output-file f 
-                                   'text
-                                   (if (equal? args '(append))
-                                       'append
-                                       'truncate))))
+                                   #:mode 'text
+                                   #:exists (if (equal? args '(append))
+                                                'append
+                                                'truncate))))
 
 (xdef instring  open-input-string)
 (xdef outstring open-output-string)
