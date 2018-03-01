@@ -719,7 +719,7 @@
 
 ; Repeatedly evaluates its body till it returns nil, then returns vals.
 
-(mac drain (expr (o eof nil))
+(mac drain (expr (o eof 'nil))
   (w/uniq (gacc gdone gres)
     `(with (,gacc nil ,gdone nil)
        (while (no ,gdone)

@@ -18,8 +18,7 @@
 
 (define (ac s env)
   (cond ((string? s) (ac-string s env))
-        ((keyword? s) s)
-        ((literal? s) (list 'quote s))
+        ((literal? s) s)
         ((ssyntax? s) (ac (expand-ssyntax s) env))
         ((symbol? s) (ac-var-ref s env))
         ((ssyntax? (xcar s)) (ac (cons (expand-ssyntax (car s)) (cdr s)) env))
@@ -68,6 +67,7 @@
       (char? x)
       (string? x)
       (number? x)
+      (keyword? x)
       (ar-nil? x)))
 
 (define (ssyntax? x)
@@ -269,12 +269,15 @@
 ; (if nil a b) -> b
 ; (if nil a b c) -> (if b c)
 
+(define (nullify x)
+  (if (ar-nil? x) (list 'quote x) x))
+
 (define (ac-if args env)
-  (cond ((null? args) (list 'quote ar-false))
+  (cond ((null? args) ar-false)
         ((null? (cdr args)) (ac (car args) env))
         (#t `(if (not (ar-false? ,(ac (car args) env)))
-                 ,(ac (cadr args) env)
-                 ,(ac-if (cddr args) env)))))
+                 ,(nullify (ac (cadr args) env))
+                 ,(nullify (ac-if (cddr args) env))))))
 
 (define (ac-dbname! name env)
   (if (symbol? name)
@@ -356,7 +359,7 @@
 ; so it's not present if ra is nil or '()
 
 (define (ac-complex-opt var expr env ra)
-  (list (list var `(if (pair? ,ra) (car ,ra) ,(ac expr env)))))
+  (list (list var `(if (pair? ,ra) (car ,ra) ,(nullify (ac expr env))))))
 
 ; extract list of variables from list of two-element lists.
 
