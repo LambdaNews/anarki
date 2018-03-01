@@ -90,22 +90,6 @@
 (mac defconst (name (o value 'nil) (o docstring))
   `(do (assign ,name ,value) ',name))
 
-(mac and args
-  (if args
-      (if (cdr args)
-          `(if ,(car args) (and ,@(cdr args)))
-          (car args))
-      't))
-
-(def assoc (key al)
-  (if (atom al)
-       nil
-      (and (acons (car al)) (is (caar al) key))
-       (car al)
-      (assoc key (cdr al))))
-
-(def alref (al key) (cadr (assoc key al)))
-
 (mac with (parms . body)
   `((fn ,(map1 car (pair parms))
      ,@body)
@@ -119,6 +103,24 @@
       `(do ,@body)
       `(let ,(car parms) ,(cadr parms) 
          (withs ,(cddr parms) ,@body))))
+
+(mac and args
+  (if args
+      (if (cdr args)
+          `(if ,(car args) (and ,@(cdr args)))
+          (let g (uniq 'and)
+            `(let ,g ,(car args)
+               (if ,g ,g))))
+      't))
+
+(def assoc (key al)
+  (if (atom al)
+       nil
+      (and (acons (car al)) (is (caar al) key))
+       (car al)
+      (assoc key (cdr al))))
+
+(def alref (al key) (cadr (assoc key al)))
 
 ; Rtm prefers to overload + to do this
 
@@ -1076,7 +1078,7 @@
 
 (def listtab (al)
   (let h (table)
-    (map (fn ((k v)) (= (h k) v))
+    (map (fn ((k v)) (= (ref h k) v))
          al)
     h))
 
@@ -1145,7 +1147,8 @@
       (json-parse chars))))
 
 (def exists-firebase (file)
-  (~is (load-firebase file) 'null))
+  (when (~is (load-firebase file) 'null)
+    file))
 
 (def dir-firebase (file)
   (let x (+ "curl -fsSL 'https://" firebase-db* ".firebaseio.com/" file ".json?shallow=true&access_token=" firebase-token* "'")
@@ -1504,9 +1507,9 @@
 (def dedup (xs)
   (with (h (table) acc nil)
     (each x xs
-      (unless (h x)
+      (unless (ref h x)
         (push x acc)
-        (set (h x))))
+        (set (ref h x))))
     (rev acc)))
 
 (def single (x) (and (acons x) (no (cdr x))))
@@ -1675,7 +1678,7 @@
 
 (def memtable (ks)
   (let h (table)
-    (each k ks (set (h k)))
+    (each k ks (set (ref h k)))
     h))
 
 (defvar bar* " | ")

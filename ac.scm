@@ -57,7 +57,8 @@
       (string-copy s)))          ; avoid immutable strings
 
 (define ar-nil '())
-(define ar-t 't)
+(define ar-true #t)
+(define ar-false #f)
 
 (define (ar-nil? x)
   (eqv? x ar-nil))
@@ -262,14 +263,14 @@
          '())
         (#t (f l))))
 
-; (if) -> nil
+; (if) -> false
 ; (if x) -> x
 ; (if t a ...) -> a
 ; (if nil a b) -> b
 ; (if nil a b c) -> (if b c)
 
 (define (ac-if args env)
-  (cond ((null? args) (list 'quote ar-nil))
+  (cond ((null? args) (list 'quote ar-false))
         ((null? (cdr args)) (ac (car args) env))
         (#t `(if (not (ar-false? ,(ac (car args) env)))
                  ,(ac (cadr args) env)
@@ -551,10 +552,10 @@
 ; full Arc car and cdr, so we can destructure more things
 
 (define (ar-xcar x)
-  (if (ar-nil? x) x (car x)))
+  (if (ar-false? x) x (car x)))
       
 (define (ar-xcdr x)
-  (if (ar-nil? x) x (cdr x)))
+  (if (ar-false? x) x (cdr x)))
 
 ; definition of falseness for Arc if.
 
@@ -577,7 +578,8 @@
 
 (define (ar-ref com ind (val ar-nil))
   (cond ((hash? com)
-         (hash-ref com ind val))
+         (let ((ind (if (ar-false? ind) ar-nil ind)))
+           (hash-ref com ind val)))
         ((sequence? com)
          (sequence-ref com ind))
         (#t (com ind))))
@@ -598,19 +600,17 @@
                    ((null? x)     x)
                    (#t            (err "Can't take cdr of" x)))))
 
-(define (tnil x) (if x ar-t ar-nil))
-
 ; (pairwise pred '(a b c d)) =>
 ;   (and (pred a b) (pred b c) (pred c d))
 ; pred returns t/nil, as does pairwise
 ; reduce? 
 
 (define (pairwise pred lst)
-  (cond ((null? lst) ar-t)
-        ((null? (cdr lst)) ar-t)
-        ((not (ar-nil? (pred (car lst) (cadr lst))))
+  (cond ((null? lst) ar-true)
+        ((null? (cdr lst)) ar-true)
+        ((not (ar-false? (pred (car lst) (cadr lst))))
          (pairwise pred (cdr lst)))
-        (#t '())))
+        (#t ar-false)))
 
 ; not quite right, because behavior of underlying eqv unspecified
 ; in many cases according to r5rs
@@ -619,9 +619,9 @@
 ; for (is x y)
 
 (define (ar-is2 a b)
-  (tnil (or (eqv? a b)
-            (and (string? a) (string? b) (string=? a b))
-            (and (ar-false? a) (ar-false? b)))))
+  (or (eqv? a b)
+      (and (string? a) (string? b) (string=? a b))
+      (and (ar-false? a) (ar-false? b))))
 
 ; for all other uses of is
 
@@ -629,7 +629,7 @@
 
 (xdef err err)
 (xdef nil ar-nil)
-(xdef t   ar-t)
+(xdef t   ar-true)
 
 (define (all test seq)
   (or (null? seq) 
@@ -669,28 +669,29 @@
 ; generic comparison
 
 (define (ar->2 x y)
-  (tnil (cond ((and (number? x) (number? y)) (> x y))
-              ((and (string? x) (string? y)) (string>? x y))
-              ((and (symbol? x) (symbol? y)) (string>? (symbol->string x)
-                                                       (symbol->string y)))
-              ((and (char? x) (char? y)) (char>? x y))
-              (#t (> x y)))))
+  (cond ((and (number? x) (number? y)) (> x y))
+        ((and (string? x) (string? y)) (string>? x y))
+        ((and (symbol? x) (symbol? y)) (string>? (symbol->string x)
+                                                 (symbol->string y)))
+        ((and (char? x) (char? y)) (char>? x y))
+        (#t (> x y))))
 
 (xdef > (lambda args (pairwise ar->2 args)))
 
 (define (ar-<2 x y)
-  (tnil (cond ((and (number? x) (number? y)) (< x y))
-              ((and (string? x) (string? y)) (string<? x y))
-              ((and (symbol? x) (symbol? y)) (string<? (symbol->string x)
-                                                       (symbol->string y)))
-              ((and (char? x) (char? y)) (char<? x y))
-              (#t (< x y)))))
+  (cond ((and (number? x) (number? y)) (< x y))
+        ((and (string? x) (string? y)) (string<? x y))
+        ((and (symbol? x) (symbol? y)) (string<? (symbol->string x)
+                                                 (symbol->string y)))
+        ((and (char? x) (char? y)) (char<? x y))
+        (#t (< x y))))
 
 (xdef < (lambda args (pairwise ar-<2 args)))
 
 (xdef len (lambda (x)
              (cond ((string? x) (string-length x))
                    ((hash? x) (hash-count x))
+                   ((eq? x #f) 0)
                    (#t (length x)))))
 
 (define (ar-tagged? x)
@@ -872,7 +873,7 @@
                                         (map (lambda (y) (ar-coerce y 'string)) 
                                              x)))
                       (else      (err "Can't coerce" x type))))
-    ((ar-nil? x)    (case type
+    ((ar-false? x)  (case type
                       ((string)  "")
                       (else      (err "Can't coerce" x type))))
     ((null? x)      (case type
@@ -913,7 +914,7 @@
              (when (thread? thd)
                (unless (eqv? thd (current-thread))
                  (thread-wait thd)))
-             ar-t))
+             ar-true))
 
 (define (wrapnil f) (lambda args (apply f args) ar-nil))
 
@@ -959,7 +960,7 @@
 ;                           (if (pair? args) (car args) ar-nil))))
                    
 (define (fill-table h pairs)
-  (if (ar-nil? pairs)
+  (if (ar-false? pairs)
       h
       (let ((pair (car pairs)))
         (begin (hash-set! h (car pair) (cadr pair))
@@ -986,10 +987,10 @@
 ; create intermediate directories like mkdir -p.
 
 (xdef file-exists (lambda (name)
-                     (if (file-exists? name) name ar-nil)))
+                     (if (file-exists? name) name ar-false)))
 
 (xdef dir-exists (lambda (name)
-                     (if (directory-exists? name) name ar-nil)))
+                     (if (directory-exists? name) name ar-false)))
 
 (xdef rmfile (wrapnil delete-file))
 
@@ -1053,7 +1054,7 @@
              (memf file-exists?
                    (map (lambda (base) (build-path base (string-append path ".arc")))
                         ac-load-path))
-             (list ar-nil)))))
+             (list ar-false)))))
 
 (xdef resolve aresolve)
 
@@ -1075,7 +1076,7 @@
 (define (arequire lib)
   (or (ac-feature? lib)
       (aload (symbol->string lib))
-      ar-t))
+      ar-true))
 
 (xdef require arequire)
 
@@ -1197,9 +1198,11 @@
 
 (xdef sref 
   (lambda (com val ind)
-    (cond ((hash? com)   (if (ar-nil? val)
-                             (hash-remove! com ind)
-                             (hash-set! com ind val)))
+    (cond ((hash? com)
+           (let ((ind (if (ar-false? ind) ar-nil ind)))
+             (if (ar-false? val)
+                 (hash-remove! com ind)
+                 (hash-set! com ind val))))
           ((string? com) (string-set! com ind val))
           ((pair? com)   (nth-set! com ind val))
           (#t (err "Can't set reference " com ind val)))
@@ -1219,7 +1222,7 @@
                             (lambda () #f)
                             ac-namespace))
 
-(xdef bound (lambda (x) (tnil (bound? x))))
+(xdef bound bound?)
 
 (xdef newstring make-string)
 
@@ -1227,7 +1230,7 @@
 
 ; bad name
 
-(xdef exact (lambda (x) (tnil (exint? x))))
+(xdef exact exint?)
 
 (xdef msec                         current-milliseconds)
 (xdef current-process-milliseconds current-process-milliseconds)
@@ -1263,14 +1266,14 @@
 			      (lambda ()
 				(thread-cell-set! ar-sema-cell #f)))))))
 
-(xdef dead (lambda (x) (tnil (thread-dead? x))))
+(xdef dead thread-dead?)
 
 ; Added because Mzscheme buffers output.  Not a permanent part of Arc.
 ; Only need to use when declare explicit-flush optimization.
 
-(xdef flushout (lambda () (flush-output) ar-t))
+(xdef flushout (lambda () (flush-output) ar-true))
 
-(xdef ssyntax (lambda (x) (tnil (ssyntax? x))))
+(xdef ssyntax ssyntax?)
 
 (xdef ssexpand (lambda (x)
                   (if (symbol? x) (expand-ssyntax x) x)))
