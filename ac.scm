@@ -17,7 +17,7 @@
 
 (define (ac s env)
   (cond ((string? s) (ac-string s env))
-        ((literal? s) s)
+        ((literal? s) (list 'quote s))
         ((ssyntax? s) (ac (expand-ssyntax s) env))
         ((symbol? s) (ac-var-ref s env))
         ((ssyntax? (xcar s)) (ac (cons (expand-ssyntax (car s)) (cdr s)) env))
@@ -35,6 +35,9 @@
         ((eq? (xcar (xcar s)) 'andf) (ac-andf s env))
         ((pair? s) (ac-call (car s) (cdr s) env))
         (#t (err "Bad object in expression" s))))
+
+(define-namespace-anchor ac-anchor)
+(define ac-namespace (namespace-anchor->namespace ac-anchor))
 
 (define atstrings #f)
 
@@ -459,7 +462,7 @@
           ((and (pair? fn) (eqv? (car fn) 'fn))
            `(,(ac fn env) ,@(ac-args (cadr fn) args env)))
           ((and direct-calls (symbol? fn) (not (lex? fn env)) (bound? fn)
-                (procedure? (namespace-variable-value (ac-global-name fn))))
+                (procedure? (bound? fn)))
            (ac-global-call fn args env))
           ((= (length args) 0)
            `(ar-funcall0 ,(ac fn env) ,@(map (lambda (x) (ac x env)) args)))
@@ -484,9 +487,7 @@
 
 (define (ac-macro? fn)
   (if (symbol? fn)
-      (let ((v (namespace-variable-value (ac-global-name fn) 
-                                         #t 
-                                         (lambda () #f))))
+      (let ((v (bound? fn)))
         (if (and v
                  (ar-tagged? v)
                  (eq? (ar-type v) 'mac))
@@ -541,7 +542,8 @@
     ((xxdef a b)
      (let ((nm (ac-global-name 'a))
            (a b))
-       (namespace-set-variable-value! nm a)
+       (parameterize ((current-namespace ac-namespace))
+         (namespace-set-variable-value! nm a))
        a))))
 
 (define fn-signatures (make-hash))
@@ -1057,7 +1059,7 @@
 ; tle kept as a way to get a break loop when a scheme err
 
 (define (arc-eval expr) 
-  (eval (ac expr '())))
+  (eval (ac expr '()) ac-namespace))
 
 (define (tle)
   (display "Arc> ")
@@ -1167,7 +1169,7 @@
     (if (eof-object? x)
         #t
         (let ((scm (ac x '())))
-          (eval scm)
+          (eval scm ac-namespace)
           (pretty-print scm op)
           (newline op)
           (newline op)
@@ -1190,8 +1192,7 @@
 
 (xdef macex1 (lambda (e) (ac-macex e 'once)))
 
-(xdef eval (lambda (e)
-              (eval (ac e '()))))
+(xdef eval arc-eval)
 
 (xdef scheme-eval eval)
 
@@ -1273,7 +1274,8 @@
 (define (bound? arcname)
   (namespace-variable-value (ac-global-name arcname)
                             #t
-                            (lambda () #f)))
+                            (lambda () #f)
+                            ac-namespace))
 
 (xdef bound (lambda (x) (tnil (bound? x))))
 

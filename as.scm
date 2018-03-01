@@ -1,9 +1,13 @@
-; mzscheme -m -f as.scm
+; racket -t as.scm
 ; (tl)
 ; (asv)
 ; http://localhost:8080
+#lang racket/load
 
-(require mzscheme) ; promise we won't redefine mzscheme bindings
+; is there a better way to prevent ac.scm from printing each
+; statement?
+(define default-print (current-print))
+(current-print (lambda args #f))
 
 (require "ac.scm") 
 (require "brackets.scm")
@@ -11,4 +15,8 @@
 
 (aload (aresolve "arc.arc"))
 (aload (aresolve "libs.arc"))
+
+(current-print default-print)
+
+(tl)
 
