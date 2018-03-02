@@ -583,9 +583,13 @@
   (cond ((hash? com)
          (let ((ind (if (ar-false? ind) ar-nil ind)))
            (hash-ref com ind val)))
-        ((sequence? com)
-         (sequence-ref com ind))
-        (#t (com ind))))
+        ((string? com)
+         (string-ref com ind))
+        ((pair? com)
+         (list-ref com ind))
+        ((procedure? com)
+         (com ind))
+        (#t (sequence-ref com ind))))
 
 (xdef ref ar-ref)
 
