@@ -167,6 +167,7 @@
 (defvar url->story* (table))
 (defvar maxid* 0)
 (defvar initload* 15000)
+(defvar ranked-stories* ())
 
 ; The dir expression yields stories in order of file creation time 
 ; (because arc infile truncates), so could just rev the list instead of
@@ -192,7 +193,7 @@
     (= stories*  (rev (merge (compare < !id) items!story items!poll))
        comments* (rev items!comment))
     (hook 'initload items))
-  (ensure-topstories))
+  (thread (ensure-topstories)))
 
 (def ensure-topstories ()
   (aif (errsafe (readfile1 (+ newsdir* "topstories")))
@@ -294,7 +295,7 @@
 
 (def hn-rank (s)
   (whenlet id s!hnid
-    (len:mem id hn-topstories*)))
+    (atomic (len:mem id hn-topstories*))))
 
 (def frontpage-rank (s (o scorefn realscore) (o gravity gravity*))
   (or (hn-rank s)
