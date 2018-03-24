@@ -2667,12 +2667,19 @@ first asterisk isn't whitespace.
             ;(prn s)
             s)))))
 
+(def eof? (x)
+  (on-err
+    (fn (c) t)
+    (fn () (type x) nil)))
+
 (def update-hn-stories ()
   (let topstories (json-parse:tostring:system "curl -fsSL https://hacker-news.firebaseio.com/v0/topstories.json")
-    (= hn-topstories* topstories)
-    (each id (cut topstories 0 hn-itemcount*)
-      (hn-item id))
-    (gen-topstories)))
+    (unless (eof? topstories)
+      (= hn-topstories* topstories)
+      (each id (cut topstories 0 hn-itemcount*)
+        (hn-item id))
+      (gen-topstories)
+      hn-topstories*)))
 
 (defbg update-stories 10
   (update-hn-stories))
