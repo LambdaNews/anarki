@@ -180,6 +180,7 @@
 
 (def load-items ()
   (system (+ "rm " storydir* "*.tmp"))
+  (refresh-token)
   (pr "load items: ") 
   (with (items (table)
          ids   (sort > (map int (dir-firebase storydir*))))
@@ -2685,8 +2686,8 @@ first asterisk isn't whitespace.
   (update-hn-stories))
 
 (def refresh-token ()
-  (when (file-exists "../narc.py")
-    (putenv "ARC_TOKEN" (trim:tostring:system "cd .. && python narc.py"))
+  (when (file-exists "./narc.py")
+    (putenv "ARC_TOKEN" (trim:tostring:system "python narc.py"))
     (getenv "ARC_TOKEN")))
 
 (defbg refresh-token 900
